@@ -1,0 +1,54 @@
+[submodule "extern/volk"]
+	path = extern/volk
+	url = https://github.com/zeux/volk
+[submodule "extern/glm"]
+	path = extern/glm
+	url = https://github.com/g-truc/glm
+[submodule "extern/stb"]
+	path = extern/stb
+	url = https://github.com/nothings/stb
+[submodule "extern/imgui"]
+	path = extern/imgui
+	url = https://github.com/ocornut/imgui
+[submodule "extern/tinygltf"]
+	path = extern/tinygltf
+	url = https://github.com/syoyo/tinygltf
+[submodule "extern/glfw"]
+	path = extern/glfw
+	url = https://github.com/glfw/glfw
+[submodule "extern/glslang"]
+	path = extern/glslang
+	url = https://github.com/KhronosGroup/glslang
+[submodule "extern/spirv-cross"]
+	path = extern/spirv-cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross
+[submodule "extern/HWCPipe"]
+	path = extern/HWCPipe
+	url = https://github.com/ARM-software/HWCPipe
+[submodule "extern/vma"]
+	path = extern/vma
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+[submodule "extern/spdlog"]
+	path = extern/spdlog
+	url = https://github.com/gabime/spdlog
+[submodule "extern/ktx"]
+	path = extern/ktx
+	url = https://github.com/KhronosGroup/KTX-Software
+[submodule "extern/astc"]
+	path = extern/astc
+	url = https://github.com/ARM-software/astc-encoder
+[submodule "extern/CTPL"]
+	path = extern/CTPL
+	url = https://github.com/vit-vit/CTPL
+[submodule "extern/docopt"]
+	path = extern/docopt
+	url = https://github.com/docopt/docopt.cpp
+[submodule "extern/vulkan"]
+	path = extern/vulkan
+	url = https://github.com/KhronosGroup/Vulkan-Headers
+[submodule "assets"]
+	path = assets
+	url = https://github.com/KhronosGroup/Vulkan-Samples-Assets
+[submodule "extern/entt"]
+	path = extern/entt
+	url = https://github.com/skypjack/entt
