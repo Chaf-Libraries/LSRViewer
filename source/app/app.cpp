@@ -156,8 +156,26 @@ namespace chaf
 		resource_manager->update([this](std::unique_ptr<vkb::sg::Scene>& scene_cache) {
 			Hierarchy::reset_selected();
 			this->scene.reset();
+			scene = nullptr;
+			
+			if(scene == nullptr || scene->get_root_node().get_children().empty())
+				this->scene = std::unique_ptr<vkb::sg::Scene>(std::move(scene_cache));
+			else
+			{
+				scene_caches.emplace_back(std::move(scene_cache));
+				this->scene->get_root_node().add_child(scene_caches.back()->get_root_node());
+			}
+				
+			std::string node_name = "main_camera";
 
-			this->scene = std::unique_ptr<vkb::sg::Scene>(std::move(scene_cache));
+			for (auto& node : scene->get_root_node().get_children())
+			{
+				if (node->has_component<vkb::sg::Camera>())
+				{
+					node_name = node->get_name();
+					break;
+				}
+			}
 
 			auto& camera_node = vkb::add_free_camera(*(this->scene), "main_camera", get_render_context().get_surface_extent());
 			this->camera = &camera_node.get_component<vkb::sg::Camera>();
@@ -167,11 +185,15 @@ namespace chaf
 			//this->scene->get_root_node().get_component<vkb::sg::Transform>().set_translation({ 0.f,0.f,0.f });
 			//this->scene->get_root_node().get_component<vkb::sg::Transform>().set_scale({ 10.f,10.f,10.f });
 
-			vkb::ShaderSource vert_shader("pbr.vert");
-			vkb::ShaderSource frag_shader("pbr.frag");
+			vkb::ShaderSource vert_shader("base.vert");
+			vkb::ShaderSource frag_shader("base.frag");
 			auto scene_subpass = std::make_unique<vkb::ForwardSubpass>(get_render_context(), std::move(vert_shader), std::move(frag_shader), *(this->scene), *(this->camera));
-
 			auto render_pipeline = vkb::RenderPipeline();
+			for (auto& scene_ : scene_caches)
+			{
+				render_pipeline.add_subpass(std::move(std::make_unique<vkb::ForwardSubpass>(get_render_context(), std::move(vert_shader), std::move(frag_shader), *scene_, *(this->camera))));
+			}
+
 			render_pipeline.add_subpass(std::move(scene_subpass));
 
 			set_render_pipeline(std::move(render_pipeline));

@@ -55,6 +55,8 @@ class Frustum
 	 */
 	bool check_sphere(glm::vec3 pos, float radius);
 
+	bool check_box(glm::vec3 min, glm::vec3 max);
+
 	const std::array<glm::vec4, 6> &get_planes() const;
 
   private:

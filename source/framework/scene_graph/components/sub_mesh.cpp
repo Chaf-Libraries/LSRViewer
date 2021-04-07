@@ -29,6 +29,17 @@ std::type_index SubMesh::get_type()
 	return typeid(SubMesh);
 }
 
+void SubMesh::set_bounds(const glm::vec3& min, const glm::vec3& max)
+{
+	bounds.update(min);
+	bounds.update(max);
+}
+
+const AABB& SubMesh::get_bounds() const
+{
+	return bounds;
+}
+
 void SubMesh::set_attribute(const std::string &attribute_name, const VertexAttribute &attribute)
 {
 	vertex_attributes[attribute_name] = attribute;

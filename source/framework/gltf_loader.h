@@ -29,6 +29,7 @@
 #include "timer.h"
 
 #define KHR_LIGHTS_PUNCTUAL_EXTENSION "KHR_lights_punctual"
+#define KHR_MATERIALS_PBRSPECULARGLOSSINESS "KHR_materials_pbrSpecularGlossiness"
 
 namespace vkb
 {

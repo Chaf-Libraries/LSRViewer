@@ -4,6 +4,7 @@
 #include <framework/scene_graph/components/camera.h>
 
 #include <resource/resource_manager.h>
+#include <scene_graph/scene.h>
 
 #include <ctpl_stl.h>
 
@@ -24,7 +25,7 @@ namespace chaf
 		vkb::sg::Camera* camera{ nullptr };
 		std::unique_ptr<vkb::sg::Camera> default_camera{ nullptr };
 
-		
+		std::vector<std::unique_ptr<vkb::sg::Scene>> scene_caches;
 
 		VkPipelineCache pipeline_cache{ VK_NULL_HANDLE };
 

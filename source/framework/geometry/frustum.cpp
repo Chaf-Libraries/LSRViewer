@@ -62,13 +62,59 @@ bool Frustum::check_sphere(glm::vec3 pos, float radius)
 {
 	for (size_t i = 0; i < planes.size(); i++)
 	{
-		if ((planes[i].x * pos.x) + (planes[i].y * pos.y) + (planes[i].z * pos.z) + planes[i].w <= -radius)
+		float result = 0.1f;
+
+		if (i != static_cast<size_t>(FRONT) && i != static_cast<size_t>(BACK))
+		{
+			result = glm::dot(planes[i], glm::vec4(pos, 1.f)) + radius;
+		}
+
+		if (result < 0.0f)
 		{
 			return false;
 		}
 	}
 	return true;
 }
+
+bool Frustum::check_box(glm::vec3 min, glm::vec3 max)
+{
+	// check bounding sphere first
+	glm::vec3 pos = (max + min) * 0.5f;
+	float radius = glm::length(max - min) / 0.5f;
+	//return check_sphere(pos, radius);
+
+	if (!check_sphere(pos, radius))
+	{
+		return false;
+	}
+	else
+	{
+		// check bounding box
+		glm::vec3 vertices[8] = {
+				{ min },
+				{ max.x, min.y, min.z },
+				{ max.x, max.y, min.z },
+				{ min.x, max.y, min.z },
+				{ max.x, min.y, max.z },
+				{ max.x, max.y, max.z },
+				{ min.x, max.y, max.z },
+				{ max }};
+
+		for (auto& vertex : vertices)
+		{
+			for (auto& plane : planes)
+			{
+				if ((plane.x * vertex.x) + (plane.y * vertex.y) + (plane.z * vertex.z) + plane.w > 0)
+				{
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+}
+
 const std::array<glm::vec4, 6> &Frustum::get_planes() const
 {
 	return planes;

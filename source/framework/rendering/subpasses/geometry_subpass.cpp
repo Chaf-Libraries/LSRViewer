@@ -27,6 +27,7 @@
 #include "scene_graph/components/texture.h"
 #include "scene_graph/node.h"
 #include "scene_graph/scene.h"
+#include "geometry/frustum.h"
 
 namespace vkb
 {
@@ -57,30 +58,49 @@ void GeometrySubpass::get_sorted_nodes(std::multimap<float, std::pair<sg::Node *
 {
 	auto camera_transform = camera.get_node()->get_transform().get_world_matrix();
 
+	Frustum frustum;
+	uint32_t cull_count = 0;
+
 	for (auto &mesh : meshes)
 	{
-		for (auto &node : mesh->get_nodes())
+		for (auto& node : mesh->get_nodes())
 		{
 			auto node_transform = node->get_transform().get_world_matrix();
 
-			const sg::AABB &mesh_bounds = mesh->get_bounds();
+			frustum.update(camera.get_projection() * camera.get_view());
 
-			sg::AABB world_bounds{mesh_bounds.get_min(), mesh_bounds.get_max()};
+			const sg::AABB& mesh_bounds = mesh->get_bounds();
+
+			sg::AABB world_bounds{ mesh_bounds.get_min(), mesh_bounds.get_max() };
 			world_bounds.transform(node_transform);
+
 
 			float distance = glm::length(glm::vec3(camera_transform[3]) - world_bounds.get_center());
 
-			for (auto &sub_mesh : mesh->get_submeshes())
+			// bounding sphere
+			float radius = glm::length(mesh_bounds.get_scale() * node->get_transform().get_scale()) / 2.f;
+			glm::vec3 center = mesh_bounds.get_center() + node->get_transform().get_translation();
+			
+
+			//if (frustum.check_sphere(center, radius)/* && distance - radius < camera.get_far_plane() && distance + radius > camera.get_near_plane()*/)
 			{
-				if (sub_mesh->get_material()->alpha_mode == sg::AlphaMode::Blend)
+				for (auto& sub_mesh : mesh->get_submeshes())
 				{
-					transparent_nodes.emplace(distance, std::make_pair(node, sub_mesh));
-				}
-				else
-				{
-					opaque_nodes.emplace(distance, std::make_pair(node, sub_mesh));
+					if (sub_mesh->get_material()->alpha_mode == sg::AlphaMode::Blend)
+					{
+						transparent_nodes.emplace(distance, std::make_pair(node, sub_mesh));
+					}
+					else
+					{
+						opaque_nodes.emplace(distance, std::make_pair(node, sub_mesh));
+					}
 				}
 			}
+			//else
+			{
+				cull_count++;
+			}			
+			
 		}
 	}
 }
@@ -91,6 +111,9 @@ void GeometrySubpass::draw(CommandBuffer &command_buffer)
 	std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> transparent_nodes;
 
 	get_sorted_nodes(opaque_nodes, transparent_nodes);
+
+	Frustum frustum;
+	frustum.update(camera.get_view());
 
 	// Draw opaque objects in front-to-back order
 	for (auto node_it = opaque_nodes.begin(); node_it != opaque_nodes.end(); node_it++)

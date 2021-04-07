@@ -34,26 +34,6 @@ void PerspectiveCamera::set_field_of_view(float new_fov)
 	fov = new_fov;
 }
 
-float PerspectiveCamera::get_far_plane() const
-{
-	return far_plane;
-}
-
-void PerspectiveCamera::set_far_plane(float zfar)
-{
-	far_plane = zfar;
-}
-
-float PerspectiveCamera::get_near_plane() const
-{
-	return near_plane;
-}
-
-void PerspectiveCamera::set_near_plane(float znear)
-{
-	near_plane = znear;
-}
-
 std::type_index PerspectiveCamera::get_camera_type()
 {
 	return typeid(*this);

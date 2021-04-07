@@ -253,7 +253,7 @@ std::unique_ptr<Image> Image::load(const std::string &name, const std::string &u
 	// Get extension
 	auto extension = get_extension(uri);
 
-	if (extension == "png" || extension == "jpg")
+	if (extension == "png" || extension == "jpg" || extension == "jpeg")
 	{
 		image = std::make_unique<Stb>(name, data);
 	}

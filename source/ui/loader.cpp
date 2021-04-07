@@ -15,13 +15,13 @@ namespace chaf
         ImGui::Begin("Loader");
         if (ImGui::Button("Load Scene"))
         {
-            igfd::ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".gltf", ".");
+            igfd::ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".gltf,.glb", ".");
             has_open = true;
         }
 
         if (ImGui::Button("Add Model") && !has_open)
         {
-            igfd::ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".gltf", ".");
+            igfd::ImGuiFileDialog::Instance()->OpenDialog("ChooseFileDlgKey", "Choose File", ".gltf,.glb", ".");
             is_load_scene = false;
         }
 

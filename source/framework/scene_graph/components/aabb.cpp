@@ -104,7 +104,7 @@ void AABB::reset()
 {
 	min = std::numeric_limits<glm::vec3>::max();
 
-	max = std::numeric_limits<glm::vec3>::min();
+	max = -std::numeric_limits<glm::vec3>::max();
 }
 
 }        // namespace sg

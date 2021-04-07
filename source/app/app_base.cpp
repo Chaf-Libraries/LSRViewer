@@ -97,8 +97,10 @@ namespace chaf
 
 		// Preparing render context for rendering
 		render_context = std::make_unique<vkb::RenderContext>(*device, surface, platform.get_window().get_width(), platform.get_window().get_height());
-		render_context->set_present_mode_priority({ VK_PRESENT_MODE_FIFO_KHR,
-												   VK_PRESENT_MODE_MAILBOX_KHR });
+		render_context->set_present_mode_priority({ VK_PRESENT_MODE_MAILBOX_KHR,
+																					VK_PRESENT_MODE_FIFO_KHR });
+
+		render_context->request_present_mode(VK_PRESENT_MODE_MAILBOX_KHR);
 
 		render_context->set_surface_format_priority({ {VK_FORMAT_R8G8B8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
 													 {VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR},
@@ -179,12 +181,12 @@ namespace chaf
 
 	void AppBase::update(float delta_time)
 	{
-		auto scene_future = thread_pool.push([this, &delta_time](size_t thread_index) {update_scene(delta_time); });
-		auto gui_future = thread_pool.push([this, &delta_time](size_t thread_index) {update_gui(delta_time); });
-
-		
-		scene_future.wait();
-		gui_future.wait();
+		/*auto scene_future = thread_pool.push([this, &delta_time](size_t thread_index) { });
+		auto gui_future = thread_pool.push([this, &delta_time](size_t thread_index) { });*/
+		update_gui(delta_time);
+		update_scene(delta_time);
+		/*scene_future.wait();
+		gui_future.wait();*/
 		update_stats(delta_time);
 		//update_gui(delta_time);
 
@@ -196,8 +198,6 @@ namespace chaf
 
 		
 
-		auto start = std::chrono::steady_clock::now();
-
 		command_buffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 		stats->begin_sampling(command_buffer);
 
@@ -205,8 +205,6 @@ namespace chaf
 
 		stats->end_sampling(command_buffer);
 		command_buffer.end();
-
-		LOGI("build command buffer time: {}",std::chrono::duration<double, std::ratio<1, 1000>>(std::chrono::steady_clock::now() - start).count());
 
 		render_context->submit(command_buffer);
 

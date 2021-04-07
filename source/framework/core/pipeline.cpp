@@ -270,6 +270,14 @@ GraphicsPipeline::GraphicsPipeline(Device &        device,
 	dynamic_state.pDynamicStates    = dynamic_states.data();
 	dynamic_state.dynamicStateCount = to_u32(dynamic_states.size());
 
+	if (state.get_input_assembly_state().topology == VK_PRIMITIVE_TOPOLOGY_PATCH_LIST)
+	{
+		VkPipelineTessellationStateCreateInfo pipelineTessellationStateCreateInfo{};
+		pipelineTessellationStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+		pipelineTessellationStateCreateInfo.patchControlPoints = state.get_patch_control_points();
+		create_info.pTessellationState = &pipelineTessellationStateCreateInfo;
+	}
+
 	create_info.pVertexInputState   = &vertex_input_state;
 	create_info.pInputAssemblyState = &input_assembly_state;
 	create_info.pViewportState      = &viewport_state;

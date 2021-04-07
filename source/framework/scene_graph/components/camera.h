@@ -58,10 +58,23 @@ class Camera : public Component
 
 	void set_pre_rotation(const glm::mat4 &pre_rotation);
 
+	void set_near_plane(float near_plane);
+
+	float get_near_plane() const;
+
+	void set_far_plane(float far_plane);
+
+	float get_far_plane() const;
+
   private:
 	Node *node{nullptr};
 
 	glm::mat4 pre_rotation{1.0f};
+
+protected:
+	float far_plane{ 100.0 };
+
+	float near_plane{ 0.1f };
 };
 }        // namespace sg
 }        // namespace vkb

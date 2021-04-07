@@ -328,7 +328,8 @@ inline void upload_image_to_gpu(CommandBuffer &command_buffer, core::Buffer &sta
 }        // namespace
 
 std::unordered_map<std::string, bool> GLTFLoader::supported_extensions = {
-    {KHR_LIGHTS_PUNCTUAL_EXTENSION, false}};
+	{KHR_LIGHTS_PUNCTUAL_EXTENSION, false},
+	{KHR_MATERIALS_PBRSPECULARGLOSSINESS, false}};
 
 GLTFLoader::GLTFLoader(Device &device) :
     device{device}
@@ -632,6 +633,21 @@ sg::Scene GLTFLoader::load_scene(int scene_index)
 					submesh->vertices_count = to_u32(model.accessors.at(attribute.second).count);
 				}
 
+				if (model.accessors.at(attribute.second).minValues.size() == 3 && model.accessors.at(attribute.second).maxValues.size() == 3)
+				{
+					glm::vec3 min_value = {
+						static_cast<float>(model.accessors.at(attribute.second).minValues[0]),
+						static_cast<float>(model.accessors.at(attribute.second).minValues[1]),
+						static_cast<float>(model.accessors.at(attribute.second).minValues[2]) };
+
+					glm::vec3 max_value = {
+						static_cast<float>(model.accessors.at(attribute.second).maxValues[0]),
+						static_cast<float>(model.accessors.at(attribute.second).maxValues[1]),
+						static_cast<float>(model.accessors.at(attribute.second).maxValues[2]) };
+
+					submesh->set_bounds(min_value, max_value);
+				}
+
 				core::Buffer buffer{device,
 				                    vertex_data.size(),
 				                    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -803,7 +819,7 @@ sg::Scene GLTFLoader::load_scene(int scene_index)
 
 		for (auto child_node_index : model.nodes[node_it.second].children)
 		{
-			traverse_nodes.push(std::make_pair(std::ref(traverse_root_node), child_node_index));
+			traverse_nodes.push(std::make_pair(std::ref(current_node), child_node_index));
 		}
 	}
 

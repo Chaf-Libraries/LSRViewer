@@ -74,6 +74,12 @@ set(COMMON_FILES
     common/utils.cpp
     common/strings.cpp)
 
+set(ASSET_FILES
+    asset/lru.h
+    asset/lru.cpp
+    asset/asset_manager.h
+    asset/asset_manager.cpp)
+
 set(GEOMETRY_FILES
     # Header Files
     geometry/frustum.h
@@ -109,10 +115,12 @@ set(RENDERING_SUBPASSES_FILES
     rendering/subpasses/forward_subpass.h
     rendering/subpasses/lighting_subpass.h
     rendering/subpasses/geometry_subpass.h
+    rendering/subpasses/gpu_driven_subpass.h
     # Source files
     rendering/subpasses/forward_subpass.cpp
     rendering/subpasses/lighting_subpass.cpp
-    rendering/subpasses/geometry_subpass.cpp)
+    rendering/subpasses/geometry_subpass.cpp
+    rendering/subpasses/gpu_driven_subpass.cpp)
 
 set(SCENE_GRAPH_FILES
     # Header Files
@@ -326,6 +334,7 @@ source_group("scene_graph\\components\\" FILES ${SCENE_GRAPH_COMPONENT_FILES})
 source_group("scene_graph\\scripts\\" FILES ${SCENE_GRAPH_SCRIPTS_FILES})
 source_group("stats\\" FILES ${STATS_FILES})
 source_group("graphing\\" FILES ${GRAPHING_FILES})
+source_group("asset\\" FILES ${ASSET_FILES})
 
 set(PROJECT_FILES
     ${PLATFORM_FILES}
@@ -339,7 +348,8 @@ set(PROJECT_FILES
     ${SCENE_GRAPH_COMPONENT_FILES}
     ${SCENE_GRAPH_SCRIPTS_FILES}
     ${STATS_FILES}
-    ${GRAPHING_FILES})
+    ${GRAPHING_FILES}
+    ${ASSET_FILES})
 
 # Add files based on platform
 if(VKB_DIRECT_2_DISPLAY)

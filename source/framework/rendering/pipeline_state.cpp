@@ -281,6 +281,11 @@ void PipelineState::set_subpass_index(uint32_t new_subpass_index)
 	}
 }
 
+void PipelineState::get_patch_control_points(uint32_t count)
+{
+	patch_control_points = count;
+}
+
 const PipelineLayout &PipelineState::get_pipeline_layout() const
 {
 	assert(pipeline_layout && "Graphics state Pipeline layout is not set");
@@ -335,6 +340,11 @@ const ColorBlendState &PipelineState::get_color_blend_state() const
 uint32_t PipelineState::get_subpass_index() const
 {
 	return subpass_index;
+}
+
+uint32_t PipelineState::get_patch_control_points() const
+{
+	return patch_control_points;
 }
 
 bool PipelineState::is_dirty() const

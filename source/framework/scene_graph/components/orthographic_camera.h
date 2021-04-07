@@ -56,14 +56,6 @@ class OrthographicCamera : public Camera
 
 	float get_top() const;
 
-	void set_near_plane(float near_plane);
-
-	float get_near_plane() const;
-
-	void set_far_plane(float far_plane);
-
-	float get_far_plane() const;
-
 	virtual glm::mat4 get_projection() override;
 
   private:
@@ -74,10 +66,6 @@ class OrthographicCamera : public Camera
 	float bottom{-1.0f};
 
 	float top{1.0f};
-
-	float near_plane{0.0f};
-
-	float far_plane{1.0f};
 };
 }        // namespace sg
 }        // namespace vkb

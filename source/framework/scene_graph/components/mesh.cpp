@@ -42,6 +42,7 @@ const AABB &Mesh::get_bounds() const
 
 void Mesh::add_submesh(SubMesh &submesh)
 {
+	update_bounds({ submesh.get_bounds().get_min(), submesh.get_bounds().get_max() }, {});
 	submeshes.push_back(&submesh);
 }
 

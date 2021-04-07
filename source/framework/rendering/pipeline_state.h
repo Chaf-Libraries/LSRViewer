@@ -34,7 +34,7 @@ struct VertexInputState
 
 struct InputAssemblyState
 {
-	VkPrimitiveTopology topology{VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST};
+	VkPrimitiveTopology topology{ VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
 
 	VkBool32 primitive_restart_enable{VK_FALSE};
 };
@@ -197,6 +197,8 @@ class PipelineState
 
 	void set_subpass_index(uint32_t subpass_index);
 
+	void get_patch_control_points(uint32_t count);
+
 	const PipelineLayout &get_pipeline_layout() const;
 
 	const RenderPass *get_render_pass() const;
@@ -218,6 +220,8 @@ class PipelineState
 	const ColorBlendState &get_color_blend_state() const;
 
 	uint32_t get_subpass_index() const;
+
+	uint32_t get_patch_control_points() const;
 
 	bool is_dirty() const;
 
@@ -247,5 +251,7 @@ class PipelineState
 	ColorBlendState color_blend_state{};
 
 	uint32_t subpass_index{0U};
+
+	uint32_t patch_control_points{ 3U };
 };
 }        // namespace vkb

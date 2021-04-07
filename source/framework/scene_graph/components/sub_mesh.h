@@ -27,6 +27,7 @@
 #include "core/buffer.h"
 #include "core/shader_module.h"
 #include "scene_graph/component.h"
+#include "scene_graph/components/aabb.h"
 
 namespace vkb
 {
@@ -62,6 +63,10 @@ class SubMesh : public Component
 
 	std::unique_ptr<core::Buffer> index_buffer;
 
+	void set_bounds(const glm::vec3& min, const glm::vec3& max);
+
+	const AABB& get_bounds() const;
+
 	void set_attribute(const std::string &name, const VertexAttribute &attribute);
 
 	bool get_attribute(const std::string &name, VertexAttribute &attribute) const;
@@ -78,6 +83,8 @@ class SubMesh : public Component
 
   private:
 	std::unordered_map<std::string, VertexAttribute> vertex_attributes;
+
+	AABB bounds;
 
 	const Material *material{nullptr};
 

@@ -63,5 +63,26 @@ void Camera::set_pre_rotation(const glm::mat4 &pr)
 {
 	pre_rotation = pr;
 }
+
+void Camera::set_near_plane(float near_plane)
+{
+	this->near_plane = near_plane;
+}
+
+float Camera::get_near_plane() const
+{
+	return near_plane;
+}
+
+void Camera::set_far_plane(float far_plane)
+{
+	this->far_plane = far_plane;
+}
+
+float Camera::get_far_plane() const
+{
+	return far_plane;
+}
+
 }        // namespace sg
 }        // namespace vkb

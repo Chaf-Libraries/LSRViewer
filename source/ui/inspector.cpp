@@ -10,6 +10,7 @@
 #include <framework/scene_graph/components/light.h>
 #include <framework/scene_graph/components/material.h>
 #include <framework/scene_graph/components/mesh.h>
+#include <framework/scene_graph/components/sub_mesh.h>
 #include <framework/scene_graph/components/texture.h>
 #include <framework/scene_graph/components/pbr_material.h>
 #include <framework/scene_graph/components/transform.h>
@@ -44,14 +45,12 @@ namespace chaf
 				glm::vec3 translation = transform.get_translation();
 				glm::vec3 rotation = glm::degrees(glm::eulerAngles(transform.get_rotation()));
 				glm::vec3 scale = transform.get_scale();
-
 				ImGui::DragFloat3("translation", (float*)(&translation), 0.01f, -std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 				ImGui::DragFloat3("rotation", (float*)(&rotation), 0.01f, -std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
 				ImGui::DragFloat3("scale", (float*)(&scale), 0.01f, -std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-
-				transform.set_translation(translation);
-				transform.set_rotation(glm::quat(glm::radians(rotation)));
-				transform.set_scale(scale);
+				//ImGui::Text("translation: (%f, %f, %f)", translation.x, translation.y, translation.z);
+				//ImGui::Text("rotation: (%f, %f, %f)", rotation.x, rotation.y, rotation.z);
+				//ImGui::Text("scale: (%f, %f, %f)", scale.x, scale.y, scale.z);
 			}
 		}
 
@@ -141,12 +140,19 @@ namespace chaf
 				auto& aabb = node->get_component<vkb::sg::Mesh>().get_bounds();
 				ImGui::Text("center: (%f, %f, %f)", aabb.get_center().x, aabb.get_center().y, aabb.get_center().z);
 				ImGui::Text("scale: (%f, %f, %f)", aabb.get_scale().x, aabb.get_scale().y, aabb.get_scale().z);
-				
 				ImGui::Separator();
 				for (auto submesh : node->get_component<vkb::sg::Mesh>().get_submeshes())
 				{
 					uint32_t unname_count = 1;
 					ImGui::TextColored({ 255.f,0.f,0.f,255.f }, submesh->get_name().size() ? submesh->get_name().c_str() : ("unname submesh " + std::to_string(unname_count++)).c_str());
+					
+
+					ImGui::Text("Axis-aligned bounding box");
+
+					const vkb::sg::AABB& bbox = submesh->get_bounds();
+					ImGui::Text("center: (%f, %f, %f)", bbox.get_center().x, bbox.get_center().y, bbox.get_center().z);
+					ImGui::Text("scale: (%f, %f, %f)", bbox.get_scale().x, bbox.get_scale().y, bbox.get_scale().z);
+					
 					ImGui::Text("vertices count: %d", submesh->vertices_count);
 					ImGui::Text("vertices indices: %d", submesh->vertex_indices);
 					ImGui::Text("index offset: %d", submesh->index_offset);

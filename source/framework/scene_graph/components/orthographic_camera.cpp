@@ -29,15 +29,15 @@ OrthographicCamera::OrthographicCamera(const std::string &name) :
     Camera{name}
 {}
 
-OrthographicCamera::OrthographicCamera(const std::string &name, float left, float right, float bottom, float top, float near_plane, float far_plane) :
-    Camera{name},
-    left{left},
-    right{right},
-    top{top},
-    bottom{bottom},
-    near_plane{near_plane},
-    far_plane{far_plane}
+OrthographicCamera::OrthographicCamera(const std::string& name, float left, float right, float bottom, float top, float near_plane, float far_plane) :
+	Camera{ name },
+	left{ left },
+	right{ right },
+	top{ top },
+	bottom{ bottom }
 {
+	this->near_plane = near_plane;
+	this->far_plane = far_plane;
 }
 
 std::type_index OrthographicCamera::get_camera_type()
@@ -83,26 +83,6 @@ void OrthographicCamera::set_top(float new_top)
 float OrthographicCamera::get_top() const
 {
 	return top;
-}
-
-void OrthographicCamera::set_near_plane(float new_near_plane)
-{
-	near_plane = new_near_plane;
-}
-
-float OrthographicCamera::get_near_plane() const
-{
-	return near_plane;
-}
-
-void OrthographicCamera::set_far_plane(float new_far_plane)
-{
-	far_plane = new_far_plane;
-}
-
-float OrthographicCamera::get_far_plane() const
-{
-	return far_plane;
 }
 
 glm::mat4 OrthographicCamera::get_projection()

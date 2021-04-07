@@ -48,14 +48,6 @@ class PerspectiveCamera : public Camera
 
 	void set_field_of_view(float fov);
 
-	float get_far_plane() const;
-
-	void set_far_plane(float zfar);
-
-	float get_near_plane() const;
-
-	void set_near_plane(float znear);
-
 	float get_aspect_ratio();
 
 	float get_field_of_view();
@@ -72,10 +64,6 @@ class PerspectiveCamera : public Camera
 	 * @brief Horizontal field of view in radians
 	 */
 	float fov{glm::radians(60.0f)};
-
-	float far_plane{100.0};
-
-	float near_plane{0.1f};
 };
 }        // namespace sg
 }        // namespace vkb

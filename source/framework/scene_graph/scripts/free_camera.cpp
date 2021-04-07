@@ -36,7 +36,7 @@ namespace sg
 {
 const float FreeCamera::TOUCH_DOWN_MOVE_FORWARD_WAIT_TIME = 2.0f;
 
-const float FreeCamera::ROTATION_MOVE_WEIGHT = 0.1f;
+const float FreeCamera::ROTATION_MOVE_WEIGHT = 0.5f;
 
 const float FreeCamera::KEY_ROTATION_MOVE_WEIGHT = 0.5f;
 
