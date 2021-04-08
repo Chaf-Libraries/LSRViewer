@@ -1,3 +1,0 @@
-[submodule ".\\extern\\vulkan"]
-	path = .\\extern\\vulkan
-	url = https://github.com/SaschaWillems/Vulkan
