@@ -279,7 +279,7 @@ function(SetTarget)
 
     # add target
     if("${ARG_MODE}" STREQUAL "EXE")
-        add_executable(${targetName})
+        add_executable(${targetName} WIN32)
         add_executable("Chaf::${targetName}" ALIAS ${targetName})
         if(MSVC)
             set_target_properties(${targetName} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
