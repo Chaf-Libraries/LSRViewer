@@ -18,7 +18,7 @@ Application::Application(): VulkanExampleBase(ENABLE_VALIDATION)
 
 	ImGui::StyleColorsDark();
 
-	const std::string font_path = getAssetPath() + "fonts/arialbd.ttf";
+	const std::string font_path = "../data/fonts/arialbd.ttf";
 	ImGui::GetIO().Fonts->AddFontFromFileTTF(font_path.c_str(), 20.0f);
 }
 

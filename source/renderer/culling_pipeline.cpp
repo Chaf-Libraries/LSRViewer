@@ -170,7 +170,7 @@ void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, VkDescriptorPool&
 
 	// Create pipeline
 	VkComputePipelineCreateInfo computePipelineCreateInfo = vks::initializers::computePipelineCreateInfo(pipeline_layout, 0);
-	computePipelineCreateInfo.stage = loadShader(getAssetPath() + "shaders/glsl/gpudrivenpipeline/culling.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);;
+	computePipelineCreateInfo.stage = loadShader("../data/shaders/glsl/gpudrivenpipeline/culling.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);;
 
 	VK_CHECK_RESULT(vkCreateComputePipelines(device.logicalDevice, pipeline_cache, 1, &computePipelineCreateInfo, nullptr, &pipeline));
 

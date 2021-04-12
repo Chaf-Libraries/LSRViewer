@@ -207,8 +207,8 @@ void ScenePipeline::preparePipelines(VkPipelineCache& pipeline_cache, VkRenderPa
 	pipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
 	pipelineCI.pStages = shaderStages.data();
 
-	shaderStages[0] = loadShader(getAssetPath() + "shaders/glsl/gpudrivenpipeline/scene.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader(getAssetPath() + "shaders/glsl/gpudrivenpipeline/scene.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	for (auto& material : scene.materials)
 	{
