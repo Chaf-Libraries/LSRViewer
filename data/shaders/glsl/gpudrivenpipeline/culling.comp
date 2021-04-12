@@ -1,0 +1,121 @@
+#version 450
+
+struct InstanceData 
+{
+	vec3 min_;
+    vec3 max_;
+};
+
+// Binding 0: Instance input data for culling
+layout (binding = 0, std140) buffer Instances 
+{
+   InstanceData instances[ ];
+};
+
+// Same layout as VkDrawIndexedIndirectCommand
+struct IndexedIndirectCommand 
+{
+	uint indexCount;
+	uint instanceCount;
+	uint firstIndex;
+	uint vertexOffset;
+	uint firstInstance;
+};
+
+// Binding 1: Multi draw output
+layout (binding = 1, std430) writeonly buffer IndirectDraws
+{
+	IndexedIndirectCommand indirectDraws[ ];
+};
+
+// Binding 2: Uniform block object with matrices
+layout (binding = 2) uniform UBO 
+{
+	mat4 projection;
+	mat4 view;
+	vec4 lightPos;
+	vec4 viewPos;
+    vec4 frustum[6];
+} ubo;
+
+// Binding 3: Indirect draw stats
+layout (binding = 3) buffer UBOOut
+{
+	uint drawCount[ ];
+} uboOut;
+
+layout (local_size_x = 1) in;
+
+bool checkSphere(vec3 pos, float radius)
+{
+    for (uint i = 0; i < 6; i++)
+    {
+        if ((ubo.frustum[i].x * pos.x) + (ubo.frustum[i].y * pos.y) + (ubo.frustum[i].z * pos.z) + ubo.frustum[i].w + radius<= 0.0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool checkAABB(vec3 min_val, vec3 max_val)
+{
+	vec3 pos = (min_val + max_val)*0.5;
+	float radius = length((max_val - min_val)*0.5);
+
+    if(checkSphere(pos, radius))
+    {
+        return true;
+    }
+    else
+    {
+        for (uint i=0; i < 6; i++)
+        {
+            vec4 plane = ubo.frustum[i];
+            vec3 plane_normal = { plane.x, plane.y, plane.z };
+            float plane_constant = plane.w;
+
+            vec3 axis_vert;
+
+            // x-axis
+            axis_vert.x = plane.x < 0.0 ? min_val.x : max_val.x;
+
+            // y-axis
+            axis_vert.y = plane.y < 0.0 ? min_val.y : max_val.y;
+
+            // z-axis
+            axis_vert.z = plane.z < 0.0 ? min_val.z : max_val.z;
+
+            if (dot(axis_vert, plane_normal) + plane_constant < 0.0)
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+layout (local_size_x = 1) in;
+
+void main()
+{
+	uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
+
+    if (idx == 0)
+	{
+		atomicExchange(uboOut.drawCount[idx], 0);
+	}
+
+	if (checkAABB(instances[idx].min_, instances[idx].max_))
+	{
+		indirectDraws[idx].instanceCount = 1;
+        atomicExchange(uboOut.drawCount[idx], 1);
+	}
+	else
+	{
+		indirectDraws[idx].instanceCount = 0;
+        atomicExchange(uboOut.drawCount[idx], 0);
+	}
+
+    // atomicExchange(uboOut.drawCount[idx], 1);
+}
