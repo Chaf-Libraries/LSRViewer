@@ -10,3 +10,7 @@ Init_Project()
 add_subdirectory(extern)
 add_subdirectory(source)
 
+if (MSVC)
+	 # Set the startup project .
+	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT LSRViewer)
+endif (MSVC)
