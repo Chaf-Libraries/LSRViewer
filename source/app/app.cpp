@@ -187,7 +187,7 @@ void Application::render()
 	if (camera.updated) 
 	{
 		updateUniformBuffers();
-		buildCommandBuffers();
+		// buildCommandBuffers();
 	}
 }
 

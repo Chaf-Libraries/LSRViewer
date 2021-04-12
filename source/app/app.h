@@ -19,11 +19,17 @@ public:
 	void buildCommandBuffers();
 
 	void setupDescriptors();
+
 	void prepareUniformBuffers();
+
 	void updateUniformBuffers();
+
 	void prepare();
+
 	virtual void getEnabledFeatures();
+
 	void draw();
+
 	virtual void render();
 
 	virtual void OnUpdateUIOverlay(vks::UIOverlay* overlay);
