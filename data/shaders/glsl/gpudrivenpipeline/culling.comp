@@ -7,7 +7,7 @@ struct InstanceData
 };
 
 // Binding 0: Instance input data for culling
-layout (binding = 0, std140) buffer Instances 
+layout (binding = 0) buffer Instances 
 {
    InstanceData instances[ ];
 };
@@ -50,7 +50,7 @@ bool checkSphere(vec3 pos, float radius)
 {
     for (uint i = 0; i < 6; i++)
     {
-        if ((ubo.frustum[i].x * pos.x) + (ubo.frustum[i].y * pos.y) + (ubo.frustum[i].z * pos.z) + ubo.frustum[i].w + radius<= 0.0)
+        if ((ubo.frustum[i].x * pos.x) + (ubo.frustum[i].y * pos.y) + (ubo.frustum[i].z * pos.z) + ubo.frustum[i].w + radius < 0.0)
         {
             return false;
         }
@@ -60,9 +60,8 @@ bool checkSphere(vec3 pos, float radius)
 
 bool checkAABB(vec3 min_val, vec3 max_val)
 {
-	vec3 pos = (min_val + max_val)*0.5;
-	float radius = length((max_val - min_val)*0.5);
-
+	vec3 pos = (min_val + max_val)/2.0;
+	float radius = length(min_val - max_val)/2.0;
     if(checkSphere(pos, radius))
     {
         return true;
@@ -75,7 +74,7 @@ bool checkAABB(vec3 min_val, vec3 max_val)
             vec3 plane_normal = { plane.x, plane.y, plane.z };
             float plane_constant = plane.w;
 
-            vec3 axis_vert;
+            vec3 axis_vert = { 0.0, 0.0, 0.0 };
 
             // x-axis
             axis_vert.x = plane.x < 0.0 ? min_val.x : max_val.x;
@@ -101,21 +100,14 @@ void main()
 {
 	uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
 
-    if (idx == 0)
-	{
-		atomicExchange(uboOut.drawCount[idx], 0);
-	}
-
 	if (checkAABB(instances[idx].min_, instances[idx].max_))
 	{
 		indirectDraws[idx].instanceCount = 1;
-        atomicExchange(uboOut.drawCount[idx], 1);
+        uboOut.drawCount[idx] = uint(abs(instances[idx].min_.x)*1000);
 	}
 	else
 	{
 		indirectDraws[idx].instanceCount = 0;
-        atomicExchange(uboOut.drawCount[idx], 0);
+        uboOut.drawCount[idx] = 0;
 	}
-
-    // atomicExchange(uboOut.drawCount[idx], 1);
 }
