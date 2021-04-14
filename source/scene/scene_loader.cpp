@@ -270,6 +270,7 @@ namespace chaf
 			primitive.first_index = first_index;
 			primitive.index_count = index_count;
 			primitive.material_index = gltf_primitive.material;
+			primitive.updateID();
 
 			mesh.addPrimitive(primitive);
 		}

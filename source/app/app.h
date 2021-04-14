@@ -63,4 +63,7 @@ private:
 	std::unique_ptr<ScenePipeline> scene_pipeline;
 
 	chaf::Frustum frustum;
+
+	uint32_t total_cull_cpu{ 0 };
+	uint32_t total_cull_gpu{ 0 };
 };

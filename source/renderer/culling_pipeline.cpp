@@ -55,7 +55,7 @@ void CullingPipeline::buildCommandBuffer()
 		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_set, 0, 0);
 
-		vkCmdDispatch(command_buffer, object_count, 1, 1);
+		vkCmdDispatch(command_buffer, primitive_count, 1, 1);
 	}
 
 	// TODO: need a barrier?
@@ -217,16 +217,51 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 {
 	vks::Buffer stagingBuffer;
 
-	std::vector<InstanceData> instance_data(scene.getNodes().size());
-	indirect_commands.resize(scene.getNodes().size());
+	primitive_count = 0;
 
-	for (uint32_t i = 0; i < scene.getNodes().size(); i++)
+	for (auto& node : scene.getNodes())
 	{
-		id_lookup.insert({ scene.getNodes()[i]->getID(), i });
-		object_count++;
+		if (node->hasComponent<chaf::Mesh>())
+		{
+			auto& mesh = node->getComponent<chaf::Mesh>();
+			primitive_count += static_cast<uint32_t>(mesh.getPrimitives().size());
+		}
+	}
 
-		indirect_commands[i].instanceCount = 1;
-		indirect_commands[i].firstInstance = i;
+	instance_data.resize(primitive_count);
+	indirect_commands.resize(primitive_count);
+
+	uint32_t idx = 0;
+	for (auto& node : scene.getNodes())
+	{
+		if (node->hasComponent<chaf::Mesh>())
+		{
+			auto& mesh = node->getComponent<chaf::Mesh>();
+			auto& transform = node->getComponent<chaf::Transform>();
+
+			for (uint32_t i = 0; i < mesh.getPrimitives().size(); i++)
+			{
+				auto& mesh_bounds = mesh.getPrimitives()[i].bbox;
+				chaf::AABB world_bounds = { mesh_bounds.getMin(), mesh_bounds.getMax() };
+				world_bounds.transform(transform.getWorldMatrix());
+
+				instance_data[idx].max = world_bounds.getMax();
+				instance_data[idx].min = world_bounds.getMin();
+
+				indirect_commands[idx].indexCount = mesh.getPrimitives()[i].index_count;
+				indirect_commands[idx].instanceCount = 1;
+				indirect_commands[idx].firstIndex = mesh.getPrimitives()[i].first_index;
+				indirect_commands[idx].vertexOffset = 0;
+				indirect_commands[idx].firstInstance = 0;
+
+				if (id_lookup.find(node->getID()) == id_lookup.end())
+				{
+					id_lookup[node->getID()] = {};
+				}
+				id_lookup[node->getID()].insert({ i, idx });
+				idx++;
+			}
+		}
 	}
 
 	indirect_status.draw_count.resize(indirect_commands.size());
@@ -256,24 +291,6 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 		sizeof(uint32_t)*indirect_status.draw_count.size()));
 
 	VK_CHECK_RESULT(indircet_draw_count_buffer.map());
-
-	// Setting instance data
-	for (uint32_t i = 0; i < scene.getNodes().size(); i++)
-	{
-		auto& node = scene.getNodes()[i];
-
-		if (node->hasComponent<chaf::Mesh>())
-		{
-			auto& mesh_bounds = node->getComponent<chaf::Mesh>().getBounds();
-			auto& transform = node->getComponent<chaf::Transform>();
-
-			chaf::AABB world_bounds = { mesh_bounds.getMin(), mesh_bounds.getMax() };
-			world_bounds.transform(transform.getWorldMatrix());
-
-			instance_data[i].max = world_bounds.getMax();
-			instance_data[i].min = world_bounds.getMin();
-		}
-	}
 
 	// Transfer instance data
 	VK_CHECK_RESULT(device.createBuffer(

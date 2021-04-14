@@ -64,12 +64,12 @@ namespace chaf
 		glm::vec3 pos = aabb.getCenter();
 		float radius = glm::length(aabb.getScale()) * 0.5f;
 		//return checkSphere(pos, radius);
-		if (checkSphere(pos, radius))
-		{
-			return true;
-		}
-		// Check AABB
-		else
+		//if (checkSphere(pos, radius))
+		//{
+		//	return true;
+		//}
+		//// Check AABB
+		//else
 		{
 			for (size_t i=0;i<6;i++)
 			{

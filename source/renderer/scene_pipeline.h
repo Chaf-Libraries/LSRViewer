@@ -1,6 +1,7 @@
 #pragma once
 
 #include <renderer/base_pipeline.h>
+#include <renderer/culling_pipeline.h>
 
 #include <scene/geometry/frustum.h>
 
@@ -13,7 +14,11 @@ public:
 
 	~ScenePipeline();
 
-	void bindCommandBuffers(VkCommandBuffer& cmd_buffer, Camera& camera, chaf::Frustum& frustum);
+	void bindCommandBuffers(VkCommandBuffer& cmd_buffer, chaf::Frustum& frustum);
+
+	void bindCommandBuffers(VkCommandBuffer& cmd_buffer, CullingPipeline& culling_pipeline);
+
+	void bindCommandBuffers(VkCommandBuffer& cmd_buffer, glm::vec4 frustum[], CullingPipeline& culling_pipeline);
 
 	void setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buffer& uniform_buffer);
 

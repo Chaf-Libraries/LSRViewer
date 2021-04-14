@@ -2,7 +2,12 @@
 
 #include <iostream>
 
+#ifdef _DEBUG
 #define ENABLE_VALIDATION true
+#else
+#define ENABLE_VALIDATION false
+#endif
+
 
 Application::Application(): VulkanExampleBase(ENABLE_VALIDATION)
 {
@@ -62,7 +67,15 @@ void Application::buildCommandBuffers()
 		vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
 		
 		{
-			scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], camera, frustum);
+			// CPU culling
+			// scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], frustum);
+
+			// GPU culling
+			scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], *culling_pipeline);
+
+			// Test
+			 // scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], sceneUBO.values.frustum, *culling_pipeline);
+
 		}
 
 		drawUI(drawCmdBuffers[i]);
@@ -103,7 +116,7 @@ void Application::updateUniformBuffers()
 	sceneUBO.values.view = camera.matrices.view;
 	sceneUBO.values.viewPos = camera.viewPos;
 	frustum.update(camera.matrices.perspective * camera.matrices.view);
-	std::copy(frustum.planes.begin(), frustum.planes.end(), sceneUBO.values.frustum);
+	memcpy(sceneUBO.values.frustum, frustum.planes.data(), sizeof(glm::vec4) * 6);
 	memcpy(sceneUBO.buffer.mapped, &sceneUBO.values, sizeof(sceneUBO.values));
 }
 
@@ -178,6 +191,28 @@ void Application::draw()
 
 	// Get draw count from compute
 	memcpy(&culling_pipeline->indirect_status.draw_count[0], culling_pipeline->indircet_draw_count_buffer.mapped, sizeof(uint32_t)* culling_pipeline->indirect_status.draw_count.size());
+
+	//total_cull_gpu = 0;
+	//total_cull_cpu = 0;
+	//for (auto& node : scene->getNodes())
+	//{
+	//	if (node->hasComponent<chaf::Mesh>())
+	//	{
+	//		auto& mesh = node->getComponent<chaf::Mesh>();
+	//		for (uint32_t i = 0; i < mesh.getPrimitives().size(); i++)
+	//		{
+	//			//mesh.getPrimitives()[i].visible = culling_pipeline->indirect_status.draw_count[culling_pipeline->id_lookup[node->getID()][i]];
+	//			if (culling_pipeline->indirect_status.draw_count[culling_pipeline->id_lookup[node->getID()][i]] == 0)
+	//			{
+	//				total_cull_gpu++;
+	//			}
+	//			if (mesh.getPrimitives()[i].visible == false)
+	//			{
+	//				total_cull_cpu++;
+	//			}
+	//		}
+	//	}
+	//}
 }
 
 void Application::render()
@@ -187,7 +222,7 @@ void Application::render()
 	if (camera.updated) 
 	{
 		updateUniformBuffers();
-		// buildCommandBuffers();
+		//buildCommandBuffers();
 	}
 }
 
@@ -218,6 +253,7 @@ void Application::updateOverlay()
 	ImGui::Begin((title + " GUI").c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
 	// Status
+	
 	ImGui::TextUnformatted((std::string("GPU: ") + deviceProperties.deviceName).c_str());
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (1000.0f / lastFPS), lastFPS);
 
@@ -246,7 +282,7 @@ void Application::updateOverlay()
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 5));
 			bool open = ImGui::TreeNodeEx(std::to_string(node->getID()).c_str(),
 				ImGuiTreeNodeFlags_FramePadding | (node->getChildren().size() ? 0 : ImGuiTreeNodeFlags_Leaf) | ((node == selected_node) ? ImGuiTreeNodeFlags_Selected : 0),
-				"%s", ((node->getName().size() > 0 ? node->getName() : ("unname_" + std::to_string(unname++))) + (node->visibility ? "" : " (culled)")+ (culling_pipeline->indirect_status.draw_count[culling_pipeline->id_lookup.at(node->getID())] == 1 ? "" : " (cs culled)")).c_str());
+				"%s", ((node->getName().size() > 0 ? node->getName() : ("unname_" + std::to_string(unname++))) + (node->visibility ? "" : " (culled)")).c_str());
 			ImGui::PopStyleVar();
 
 			if (ImGui::IsItemClicked())
@@ -284,6 +320,7 @@ void Application::updateOverlay()
 	// Components
 	if (selected_node && ImGui::CollapsingHeader("Components"))
 	{
+		// Transform
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 5));
 		bool open = ImGui::TreeNodeEx("Transform Components",
 			ImGuiTreeNodeFlags_FramePadding,
@@ -301,7 +338,51 @@ void Application::updateOverlay()
 			ImGui::TreePop();
 		}
 
-		ImGui::Checkbox("visibility", &selected_node->visibility);
+		// Mesh
+		if (selected_node->hasComponent<chaf::Mesh>())
+		{
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5, 5));
+			bool open = ImGui::TreeNodeEx("Mesh Components",
+				ImGuiTreeNodeFlags_FramePadding,
+				"%s", "Mesh");
+			ImGui::PopStyleVar();
+			if (open)
+			{
+				auto& mesh = selected_node->getComponent<chaf::Mesh>();
+
+				ImGui::Text("Primitive count: %d", mesh.getPrimitives().size());
+				ImGui::Text("Axis Aligned Bounding Box: ");
+				auto center = mesh.getBounds().getCenter();
+				auto scale = mesh.getBounds().getScale();
+				ImGui::Text("center: (%f, %f, %f)", center.x, center.y, center.z);
+				ImGui::Text("scale: (%f, %f, %f)", scale.x, scale.y, scale.z);
+
+				for (auto& primitive : mesh.getPrimitives())
+				{
+					ImGui::Separator();
+					ImGui::Text("Primitive %ld", primitive.id);
+					ImGui::Text("Axis Aligned Bounding Box: ");
+					auto center = primitive.bbox.getCenter();
+					auto scale = primitive.bbox.getScale();
+					auto min = primitive.bbox.getMin();
+					auto max = primitive.bbox.getMax();
+					ImGui::Text("center: (%f, %f, %f)", center.x, center.y, center.z);
+					ImGui::Text("scale: (%f, %f, %f)", scale.x, scale.y, scale.z);
+
+					chaf::AABB world_bounds = { primitive.bbox.getMin(), primitive.bbox.getMax() };
+
+					world_bounds.transform(selected_node->getComponent<chaf::Transform>().getWorldMatrix());
+
+					ImGui::Text("min: (%f, %f, %f)", world_bounds.getMin().x, world_bounds.getMin().y, world_bounds.getMin().z);
+					ImGui::Text("max: (%f, %f, %f)", world_bounds.getMax().x, world_bounds.getMax().y, world_bounds.getMax().z);
+					ImGui::PushID(static_cast<int>(primitive.id));
+					ImGui::Checkbox("visibility", &primitive.visible);
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+		}
+
 	}
 
 	ImGui::PushItemWidth(110.0f * UIOverlay.scale);

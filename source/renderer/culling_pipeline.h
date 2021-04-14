@@ -13,8 +13,8 @@ class CullingPipeline: public chaf::PipelineBase
 public:
 	struct InstanceData
 	{
-		glm::vec3 min{ 0.f };
-		glm::vec3 max{ 0.f };
+		alignas(16) glm::vec3 min{ 0.f };
+		alignas(16) glm::vec3 max{ 0.f };
 	};
 public:
 	CullingPipeline(vks::VulkanDevice& device, chaf::Scene& scene);
@@ -44,14 +44,15 @@ public:
 	VkDescriptorSet descriptor_set{ VK_NULL_HANDLE };
 	VkPipelineLayout pipeline_layout{ VK_NULL_HANDLE };
 	VkPipeline pipeline{ VK_NULL_HANDLE };
-	uint32_t object_count{ 0 };
+	uint32_t primitive_count{ 0 };
+	std::vector<InstanceData> instance_data;
 
 	struct
 	{
 		std::vector<uint32_t> draw_count;
 	}indirect_status;
 
-	// ID - index
-	std::unordered_map<uint32_t, uint32_t> id_lookup;
+	// Node_ID - <primitive_id, index>
+	std::unordered_map<uint32_t, std::unordered_map<uint32_t, uint32_t>> id_lookup;
 	// TODO: LOD
 };

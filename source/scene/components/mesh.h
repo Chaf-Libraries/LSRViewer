@@ -13,7 +13,7 @@ namespace chaf
 
 		void addPrimitive(Primitive& primitive);
 
-		const std::vector<Primitive>& getPrimitives() const;
+		std::vector<Primitive>& getPrimitives();
 
 		AABB& getBounds();
 

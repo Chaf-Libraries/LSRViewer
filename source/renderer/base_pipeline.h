@@ -17,7 +17,5 @@ namespace chaf
 		vks::VulkanDevice& device;
 		
 		std::vector<VkShaderModule> shader_modules;
-
-
 	};
 }

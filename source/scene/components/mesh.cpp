@@ -9,7 +9,7 @@ namespace chaf
 		bbox.update(primitive.bbox.getMax());
 	}
 
-	const std::vector<Primitive>& Mesh::getPrimitives() const
+	std::vector<Primitive>& Mesh::getPrimitives()
 	{
 		return primitives;
 	}

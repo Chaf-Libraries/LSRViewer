@@ -35,10 +35,11 @@ namespace chaf
 	struct Primitive
 	{
 		AABB bbox;
-		uint32_t first_index;
-		uint32_t index_count;
-		int32_t material_index;
-		size_t id;
+		uint32_t first_index{ 0 };
+		uint32_t index_count{ 0 };
+		int32_t material_index{ 0 };
+		size_t id{ 0 };
+		bool visible{ true };
 
 		void updateID();
 	};
