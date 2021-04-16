@@ -195,28 +195,32 @@ namespace chaf
 				}
 
 				// Check normal
-				if (gltf_primitive.attributes.find("NORMAL") != gltf_primitive.attributes.end()) {
+				if (gltf_primitive.attributes.find("NORMAL") != gltf_primitive.attributes.end()) 
+				{
 					const tinygltf::Accessor& accessor = model.accessors[gltf_primitive.attributes.find("NORMAL")->second];
 					const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
 					normals_buffer = reinterpret_cast<const float*>(&(model.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset]));
 				}
 
 				// Check uv
-				if (gltf_primitive.attributes.find("TEXCOORD_0") != gltf_primitive.attributes.end()) {
+				if (gltf_primitive.attributes.find("TEXCOORD_0") != gltf_primitive.attributes.end()) 
+				{
 					const tinygltf::Accessor& accessor = model.accessors[gltf_primitive.attributes.find("TEXCOORD_0")->second];
 					const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
 					texCoords_buffer = reinterpret_cast<const float*>(&(model.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset]));
 				}
 
 				// Check tangent
-				if (gltf_primitive.attributes.find("TANGENT") != gltf_primitive.attributes.end()) {
+				if (gltf_primitive.attributes.find("TANGENT") != gltf_primitive.attributes.end()) 
+				{
 					const tinygltf::Accessor& accessor = model.accessors[gltf_primitive.attributes.find("TANGENT")->second];
 					const tinygltf::BufferView& view = model.bufferViews[accessor.bufferView];
 					tangents_buffer = reinterpret_cast<const float*>(&(model.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset]));
 				}
 
 				// append vertex buffer
-				for (size_t v = 0; v < vertex_count; v++) {
+				for (size_t v = 0; v < vertex_count; v++) 
+				{
 					Vertex vert{};
 					vert.pos = glm::vec4(glm::make_vec3(&position_buffer[v * 3]), 1.0f);
 					vert.normal = glm::normalize(glm::vec3(normals_buffer ? glm::make_vec3(&normals_buffer[v * 3]) : glm::vec3(0.0f)));

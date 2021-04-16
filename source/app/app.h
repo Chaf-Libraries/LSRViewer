@@ -64,6 +64,5 @@ private:
 
 	chaf::Frustum frustum;
 
-	uint32_t total_cull_cpu{ 0 };
-	uint32_t total_cull_gpu{ 0 };
+	std::vector<uint64_t> pass_sample;
 };

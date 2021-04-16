@@ -16,20 +16,20 @@ namespace chaf
 
 		virtual ~BufferCacher();
 
-		bool vboExist(uint32_t key);
+		bool hasVBO(uint32_t key);
 
-		bool eboExist(uint32_t key);
+		bool hasEBO(uint32_t key);
 
 		VertexBuffer& getVBO(uint32_t key);
 
 		IndexBuffer& getEBO(uint32_t key);
 
+		bool isBusy() const;
+
 		template<typename VBO_Ty, typename EBO_Ty>
 		void addBuffer(uint32_t key, std::vector<VBO_Ty>& vertex_buffer_data, std::vector<EBO_Ty>& index_buffer_data);
 
 	private:
-		std::mutex mutex;
-
 		vks::VulkanDevice& device;
 		
 		VkQueue& queue;
@@ -37,11 +37,17 @@ namespace chaf
 		LruCacher<uint32_t, VertexBuffer, std::mutex> vbo_cache;
 
 		LruCacher<uint32_t, IndexBuffer, std::mutex> ebo_cache;
+
+		uint32_t num_task{ 0 };
+
+	public:
+		bool updated;
 	};
 
 	template<typename VBO_Ty, typename EBO_Ty>
 	inline void BufferCacher::addBuffer(uint32_t key, std::vector<VBO_Ty>& vertex_buffer_data, std::vector<EBO_Ty>& index_buffer_data)
 	{
+		num_task++;
 		Cacher::getThreadPool().push([this, key, &vertex_buffer_data, &index_buffer_data](size_t index) {
 
 			// Target buffer
@@ -118,9 +124,10 @@ namespace chaf
 			vkFreeMemory(device.logicalDevice, index_staging.memory, nullptr);
 
 			vbo_cache.insert(key, std::move(vertex_buffer));
-			ebo_cache.insert(key, std::move(index_buffer));	});
-		
-
+			ebo_cache.insert(key, std::move(index_buffer));
+			
+			this->num_task--;
+			updated = true; });
 	}
 
 }

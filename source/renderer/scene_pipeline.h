@@ -10,6 +10,11 @@
 class ScenePipeline :public chaf::PipelineBase
 {
 public:
+	// Extension
+	PFN_vkCmdBeginConditionalRenderingEXT vkCmdBeginConditionalRenderingEXT;
+	PFN_vkCmdEndConditionalRenderingEXT vkCmdEndConditionalRenderingEXT;
+
+public:
 	ScenePipeline(vks::VulkanDevice& device, chaf::Scene& scene);
 
 	~ScenePipeline();
@@ -18,20 +23,21 @@ public:
 
 	void bindCommandBuffers(VkCommandBuffer& cmd_buffer, CullingPipeline& culling_pipeline);
 
-	void bindCommandBuffers(VkCommandBuffer& cmd_buffer, glm::vec4 frustum[], CullingPipeline& culling_pipeline);
-
 	void setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buffer& uniform_buffer);
 
 	void preparePipelines(VkPipelineCache& pipeline_cache, VkRenderPass& render_pass);
 
+	void drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, chaf::Node* node, CullingPipeline& culling_pipeline);
+
+	void drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, chaf::Node* node, chaf::Frustum& frustum);
 public:
 	chaf::Scene& scene;
 
-	VkPipelineLayout pipelineLayout;
+	VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
 
-	VkDescriptorSet descriptorSet;
+	VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
 
-	VkPipeline pipeline;
+	VkPipeline pipeline{ VK_NULL_HANDLE };
 
 	std::vector<VkShaderModule> shader_modules;
 

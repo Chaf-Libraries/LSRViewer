@@ -37,28 +37,29 @@ namespace chaf
 		ebo_cache.clear();
 	}
 
-	bool BufferCacher::vboExist(uint32_t key)
+	bool BufferCacher::hasVBO(uint32_t key)
 	{
-		std::lock_guard g(mutex);
 		return vbo_cache.contain(key);
 	}
 
-	bool BufferCacher::eboExist(uint32_t key)
+	bool BufferCacher::hasEBO(uint32_t key)
 	{
-		std::lock_guard g(mutex);
 		return ebo_cache.contain(key);
 	}
 
 	VertexBuffer& BufferCacher::getVBO(uint32_t key)
 	{
-		std::lock_guard g(mutex);
 		return vbo_cache.get(key);
 	}
 
 	IndexBuffer& BufferCacher::getEBO(uint32_t key)
 	{
-		std::lock_guard g(mutex);
 		return ebo_cache.get(key);
+	}
+
+	bool BufferCacher::isBusy() const
+	{
+		return num_task != 0;
 	}
 
 

@@ -15,6 +15,7 @@ CullingPipeline::~CullingPipeline()
 	indirect_command_buffer.destroy();
 	instance_buffer.destroy();
 	indircet_draw_count_buffer.destroy();
+	query_result_buffer.destroy();
 
 	vkDestroyPipelineLayout(device.logicalDevice, pipeline_layout, nullptr);
 	vkDestroyDescriptorSetLayout(device.logicalDevice, descriptor_set_layout, nullptr);
@@ -22,6 +23,10 @@ CullingPipeline::~CullingPipeline()
 	vkDestroyFence(device.logicalDevice, fence, nullptr);
 	vkDestroyCommandPool(device.logicalDevice, command_pool, nullptr);
 	vkDestroySemaphore(device.logicalDevice, semaphore, nullptr);
+
+#ifdef USE_OCCLUSION_QUERY
+	vkDestroyQueryPool(device.logicalDevice, query_pool, nullptr);
+#endif // USE_OCCLUSION_QUERY
 }
 
 void CullingPipeline::buildCommandBuffer()
@@ -110,6 +115,11 @@ void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, VkDescriptorPool&
 			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			VK_SHADER_STAGE_COMPUTE_BIT,
 			3),
+		// Binding 4: query result data buffer
+		vks::initializers::descriptorSetLayoutBinding(
+			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+			4),
 	};
 
 	// Descriptor set layout
@@ -158,12 +168,19 @@ void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, VkDescriptorPool&
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			2,
 			&uniform_buffer.descriptor),
-		// Binding 3: Atomic counter (written in shader)
+		// Binding 3: Indirect draw stats (written in shader)
 		vks::initializers::writeDescriptorSet(
 			descriptor_set,
 			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			3,
 			&indircet_draw_count_buffer.descriptor),
+
+		// Binding 4: occlusion query result buffer
+		vks::initializers::writeDescriptorSet(
+			descriptor_set,
+			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			4,
+			&query_result_buffer.descriptor),
 	};
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(computeWriteDescriptorSets.size()), computeWriteDescriptorSets.data(), 0, NULL);
@@ -195,6 +212,15 @@ void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, VkDescriptorPool&
 
 	VkSemaphoreCreateInfo semaphoreCreateInfo = vks::initializers::semaphoreCreateInfo();
 	VK_CHECK_RESULT(vkCreateSemaphore(device.logicalDevice, &semaphoreCreateInfo, nullptr, &semaphore));
+
+	// Setup query pool
+#ifdef USE_OCCLUSION_QUERY
+	VkQueryPoolCreateInfo queryPoolInfo = {};
+	queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+	queryPoolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
+	queryPoolInfo.queryCount = primitive_count;
+	VK_CHECK_RESULT(vkCreateQueryPool(device.logicalDevice, &queryPoolInfo, NULL, &query_pool));
+#endif // USE_OCCLUSION_QUERY
 
 	buildCommandBuffer();
 }
@@ -228,7 +254,11 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 		}
 	}
 
-	instance_data.resize(primitive_count);
+	std::vector<InstanceData> instance_data(primitive_count);
+
+	std::vector<uint32_t> query_result(primitive_count);
+	std::fill(query_result.begin(), query_result.end(), 1);
+
 	indirect_commands.resize(primitive_count);
 
 	uint32_t idx = 0;
@@ -301,11 +331,28 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 		instance_data.data()));
 
 	VK_CHECK_RESULT(device.createBuffer(
-		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		&instance_buffer,
 		stagingBuffer.size));
 
 	device.copyBuffer(&stagingBuffer, &instance_buffer, queue);
+	stagingBuffer.destroy();
+
+	// Transfer query result data
+	VK_CHECK_RESULT(device.createBuffer(
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		&stagingBuffer,
+		query_result.size() * sizeof(uint32_t),
+		query_result.data()));
+
+	VK_CHECK_RESULT(device.createBuffer(
+		VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		&query_result_buffer,
+		stagingBuffer.size));
+
+	device.copyBuffer(&stagingBuffer, &query_result_buffer, queue);
 	stagingBuffer.destroy();
 }

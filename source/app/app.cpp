@@ -25,6 +25,8 @@ Application::Application(): VulkanExampleBase(ENABLE_VALIDATION)
 
 	const std::string font_path = "../data/fonts/arialbd.ttf";
 	ImGui::GetIO().Fonts->AddFontFromFileTTF(font_path.c_str(), 20.0f);
+
+	enabledDeviceExtensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 }
 
 Application::~Application()
@@ -62,6 +64,11 @@ void Application::buildCommandBuffers()
 	{
 		renderPassBeginInfo.framebuffer = frameBuffers[i];
 		VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
+
+#ifdef USE_OCCLUSION_QUERY
+		vkCmdResetQueryPool(drawCmdBuffers[i], culling_pipeline->query_pool, 0, culling_pipeline->primitive_count);
+#endif // USE_OCCLUSION_QUERY
+
 		vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdSetViewport(drawCmdBuffers[i], 0, 1, &viewport);
 		vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
@@ -80,6 +87,13 @@ void Application::buildCommandBuffers()
 
 		drawUI(drawCmdBuffers[i]);
 		vkCmdEndRenderPass(drawCmdBuffers[i]);
+
+
+#ifdef USE_OCCLUSION_QUERY
+		vkCmdCopyQueryPoolResults(drawCmdBuffers[i], culling_pipeline->query_pool, 0, culling_pipeline->primitive_count, culling_pipeline->query_result_buffer.buffer, 0, sizeof(uint32_t), VK_QUERY_RESULT_WAIT_BIT);
+#endif // USE_OCCLUSION_QUERY
+
+
 		VK_CHECK_RESULT(vkEndCommandBuffer(drawCmdBuffers[i]));
 	}
 }
@@ -89,7 +103,7 @@ void Application::setupDescriptors()
 	std::vector<VkDescriptorPoolSize> poolSizes = {
 	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 2),
 	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(scene->materials.size()) * 2),
-	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3),
+	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4),
 	};
 
 	const uint32_t maxSetCount = static_cast<uint32_t>(scene->images.size()) + 1;
@@ -133,6 +147,8 @@ void Application::prepare()
 
 	scene->buffer_cacher->addBuffer(0, chaf::SceneLoader::vertex_buffer, chaf::SceneLoader::index_buffer);
 
+	//while (scene->buffer_cacher->isBusy()) {}
+
 	culling_pipeline = std::make_unique<CullingPipeline>(*vulkanDevice, *scene);
 
 	scene_pipeline = std::make_unique<ScenePipeline>(*vulkanDevice, *scene);
@@ -144,6 +160,8 @@ void Application::prepare()
 
 	culling_pipeline->prepareBuffers(queue);
 	culling_pipeline->prepare(pipelineCache, descriptorPool, sceneUBO.buffer);
+
+	pass_sample.resize(culling_pipeline->primitive_count);
 
 	buildCommandBuffers();
 	prepared = true;
@@ -192,27 +210,24 @@ void Application::draw()
 	// Get draw count from compute
 	memcpy(&culling_pipeline->indirect_status.draw_count[0], culling_pipeline->indircet_draw_count_buffer.mapped, sizeof(uint32_t)* culling_pipeline->indirect_status.draw_count.size());
 
-	//total_cull_gpu = 0;
-	//total_cull_cpu = 0;
-	//for (auto& node : scene->getNodes())
-	//{
-	//	if (node->hasComponent<chaf::Mesh>())
-	//	{
-	//		auto& mesh = node->getComponent<chaf::Mesh>();
-	//		for (uint32_t i = 0; i < mesh.getPrimitives().size(); i++)
-	//		{
-	//			//mesh.getPrimitives()[i].visible = culling_pipeline->indirect_status.draw_count[culling_pipeline->id_lookup[node->getID()][i]];
-	//			if (culling_pipeline->indirect_status.draw_count[culling_pipeline->id_lookup[node->getID()][i]] == 0)
-	//			{
-	//				total_cull_gpu++;
-	//			}
-	//			if (mesh.getPrimitives()[i].visible == false)
-	//			{
-	//				total_cull_cpu++;
-	//			}
-	//		}
-	//	}
-	//}
+	//memcpy(culling_pipeline->indirect_status.draw_count.data(), culling_pipeline->conditional_buffer.mapped,sizeof(uint32_t) * culling_pipeline->indirect_status.draw_count.size());
+
+#ifdef _DEBUG
+	for (auto& node : scene->getNodes())
+	{
+		if (node->hasComponent<chaf::Mesh>())
+		{
+			auto& mesh = node->getComponent<chaf::Mesh>();
+			for (uint32_t i = 0; i < mesh.getPrimitives().size(); i++)
+			{
+				mesh.getPrimitives()[i].visible = culling_pipeline->indirect_status.draw_count[culling_pipeline->id_lookup[node->getID()][i]];
+			}
+		}
+	}
+
+#endif // _DEBUG
+
+
 }
 
 void Application::render()
@@ -253,9 +268,22 @@ void Application::updateOverlay()
 	ImGui::Begin((title + " GUI").c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
 	// Status
+	static uint32_t last_fps = lastFPS;
+	static uint32_t ave_fps = lastFPS;
+	static uint32_t count = 0;
+	static bool begin{ false };
+
+	if (lastFPS != last_fps&& lastFPS>0&&begin)
+	{
+		ave_fps = (ave_fps * count + lastFPS) / (count+1);
+		count++;
+		last_fps = lastFPS;
+	}
 	
 	ImGui::TextUnformatted((std::string("GPU: ") + deviceProperties.deviceName).c_str());
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (1000.0f / lastFPS), lastFPS);
+	ImGui::Text("ave fps: %.1d", ave_fps);
+	ImGui::Checkbox("Begin", &begin);
 
 	// Camera Controller
 	if (ImGui::CollapsingHeader("Main Camera"))
@@ -393,9 +421,10 @@ void Application::updateOverlay()
 	ImGui::PopStyleVar();
 	ImGui::Render();
 
-	if (UIOverlay.update() || UIOverlay.updated)
+	if (UIOverlay.update() || UIOverlay.updated || scene->buffer_cacher->updated)
 	{
 		buildCommandBuffers();
 		UIOverlay.updated = false;
+		scene->buffer_cacher->updated = false;
 	}
 }
