@@ -314,7 +314,7 @@ set_property(TARGET ktx PROPERTY FOLDER "Extern")
 
 # stb
 add_library(stb INTERFACE)
-target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/vulkan/external/stb")
+target_include_directories(stb INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/stb")
 
 # entt
 add_library(entt INTERFACE)

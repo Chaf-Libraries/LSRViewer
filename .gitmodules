@@ -7,3 +7,6 @@
 [submodule "extern/ctpl"]
 	path = extern/ctpl
 	url = https://github.com/vit-vit/CTPL
+[submodule "extern/stb"]
+	path = extern/stb
+	url = https://github.com/nothings/stb
