@@ -18,7 +18,7 @@ namespace chaf
 			vkDestroyImageView(device.logicalDevice, image.texture.view, nullptr);
 			vkDestroyImage(device.logicalDevice, image.texture.image, nullptr);
 			vkDestroySampler(device.logicalDevice, image.texture.sampler, nullptr);
-			vkFreeMemory(device.logicalDevice, image.texture.deviceMemory, nullptr);
+			vkFreeMemory(device.logicalDevice, image.texture.device_memory, nullptr);
 		}
 		for (auto& material : materials)
 		{

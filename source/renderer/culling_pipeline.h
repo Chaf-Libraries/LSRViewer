@@ -1,12 +1,14 @@
 #pragma once
 
 #include <renderer/base_pipeline.h>
+#include <renderer/hiz_pipeline.h>
 
 #include <scene/scene.h>
 
 #include <glm/glm.hpp>
 
 // TODO: Compute shader Occlusion Culling
+#define DEBUG_HIZ
 
 class CullingPipeline: public chaf::PipelineBase
 {
@@ -24,11 +26,15 @@ public:
 
 	void buildCommandBuffer();
 
-	void prepare(VkPipelineCache& pipeline_cache, VkDescriptorPool& descriptor_pool, vks::Buffer& uniform_buffer);
+	void prepare(VkPipelineCache& pipeline_cache, vks::Buffer& uniform_buffer);
+
+	void prepare(VkPipelineCache& pipeline_cache, vks::Buffer& uniform_buffer, HizPipeline& hiz_pipeline);
 
 	void submit();
 
 	void prepareBuffers(VkQueue& queue);
+
+	void updateDescriptorSet(vks::Buffer& uniform_buffer, HizPipeline& hiz_pipeline);
 
 public:
 	chaf::Scene& scene;
@@ -55,6 +61,8 @@ public:
 
 	VkDescriptorSetLayout descriptor_set_layout{ VK_NULL_HANDLE };
 
+	VkDescriptorPool descriptor_pool;
+
 	VkDescriptorSet descriptor_set{ VK_NULL_HANDLE };
 
 	VkPipelineLayout pipeline_layout{ VK_NULL_HANDLE };
@@ -71,6 +79,23 @@ public:
 	{
 		std::vector<uint32_t> draw_count;
 	}indirect_status;
+
+#ifdef DEBUG_HIZ
+	struct
+	{
+		std::vector<float> depth;
+	}debug_depth;
+
+	vks::Buffer debug_depth_buffer;
+
+	struct
+	{
+		std::vector<float> z;
+	}debug_z;
+
+	vks::Buffer debug_z_buffer;
+#endif // DEBUG_HIZ
+
 
 	// Node_ID - <primitive_id, index>
 	std::unordered_map<uint32_t, std::unordered_map<uint32_t, uint32_t>> id_lookup;

@@ -41,6 +41,8 @@ namespace chaf
 
 		const std::vector<MipMap>& getMipMaps() const;
 
+		uint32_t getLayers() const;
+
 	protected:
 		std::vector<uint8_t>& getMutData();
 

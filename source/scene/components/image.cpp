@@ -173,6 +173,11 @@ namespace chaf
 		return mipmaps;
 	}
 
+	uint32_t Image::getLayers() const
+	{
+		return layers;
+	}
+
 	std::vector<uint8_t>& Image::getMutData()
 	{
 		return data;

@@ -27,4 +27,9 @@ namespace chaf
 		shader_modules.push_back(shaderStage.module);
 		return shaderStage;
 	}
+
+	uint32_t PipelineBase::getGroupCount(uint32_t thread_count, uint32_t group_size)
+	{
+		return (thread_count + group_size - 1) / group_size;
+	}
 }

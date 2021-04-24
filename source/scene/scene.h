@@ -4,6 +4,7 @@
 
 #include <scene/components/primitive.h>
 #include <scene/components/material.h>
+#include <scene/components/texture.h>
 
 #include <scene/cacher/buffer_cacher.h>
 
@@ -76,7 +77,7 @@ namespace chaf
 
 	public:
 		struct Image {
-			vks::Texture2D texture;
+			Texture2D texture;
 		};
 
 		struct Texture {
@@ -88,8 +89,12 @@ namespace chaf
 		std::vector<Material> materials;
 
 		std::unique_ptr<BufferCacher> buffer_cacher;
+
+		// descriptor for texture
+		VkDescriptorSet bindless_descriptor_set;
 	};
 	
+
 }
 
 #include "scene.inl"

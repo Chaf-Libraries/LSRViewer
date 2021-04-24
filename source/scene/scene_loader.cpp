@@ -8,6 +8,8 @@
 #include <scene/components/transform.h>
 #include <scene/components/camera.h>
 #include <scene/components/mesh.h>
+#include <scene/components/image.h>
+#include <scene/components/virtual_texture.h>
 
 #include <filesystem>
 #include <iostream>
@@ -283,9 +285,21 @@ namespace chaf
 	void SceneLoader::parseImages(vks::VulkanDevice& device, tinygltf::Model& model, Scene& scene, VkQueue copy_queue)
 	{
 		scene.images.resize(model.images.size());
-		for (size_t i = 0; i < model.images.size(); i++) {
+		for (size_t i = 0; i < model.images.size(); i++) 
+		{
 			tinygltf::Image& glTFImage = model.images[i];
-			scene.images[i].texture.loadFromFile(path + "/" + glTFImage.uri, VK_FORMAT_R8G8B8A8_UNORM, &device, copy_queue);
+			scene.images[i].texture.loadFromFile(path + "/" + glTFImage.uri, &device, copy_queue);
+			
+			
+			/*auto img = Image::load(path + "/" + glTFImage.uri);
+			if (img->isAstc())
+			{
+				if (!img->checkFormatSupport(device))
+				{
+					img = std::make_unique<Astc>(*img);
+					img->generateMipmap();
+				}
+			}*/
 		}
 	}
 
@@ -301,19 +315,23 @@ namespace chaf
 	void SceneLoader::parseMaterials(tinygltf::Model& model, Scene& scene)
 	{
 		scene.materials.resize(model.materials.size());
-		for (size_t i = 0; i < model.materials.size(); i++) {
+		for (size_t i = 0; i < model.materials.size(); i++) 
+		{
 			// We only read the most basic properties required for our sample
 			tinygltf::Material glTFMaterial = model.materials[i];
 			// Get the base color factor
-			if (glTFMaterial.values.find("baseColorFactor") != glTFMaterial.values.end()) {
+			if (glTFMaterial.values.find("baseColorFactor") != glTFMaterial.values.end()) 
+			{
 				scene.materials[i].baseColorFactor = glm::make_vec4(glTFMaterial.values["baseColorFactor"].ColorFactor().data());
 			}
 			// Get base color texture index
-			if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) {
+			if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) 
+			{
 				scene.materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
 			}
 			// Get the normal map texture index
-			if (glTFMaterial.additionalValues.find("normalTexture") != glTFMaterial.additionalValues.end()) {
+			if (glTFMaterial.additionalValues.find("normalTexture") != glTFMaterial.additionalValues.end()) 
+			{
 				scene.materials[i].normalTextureIndex = glTFMaterial.additionalValues["normalTexture"].TextureIndex();
 			}
 			// Get some additional material parameters that are used in this sample
