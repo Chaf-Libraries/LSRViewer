@@ -107,7 +107,7 @@ void Application::buildCommandBuffers()
 		
 		{
 			// CPU culling
-			// scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], frustum);
+			//scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], frustum);
 
 			// GPU culling
 			scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], *culling_pipeline);
@@ -124,6 +124,7 @@ void Application::buildCommandBuffers()
 #endif // VIS_HIZ
 
 		drawUI(drawCmdBuffers[i]);
+
 		vkCmdEndRenderPass(drawCmdBuffers[i]);
 
 
@@ -132,25 +133,10 @@ void Application::buildCommandBuffers()
 		vkCmdCopyQueryPoolResults(drawCmdBuffers[i], culling_pipeline->query_pool, 0, culling_pipeline->primitive_count, culling_pipeline->query_result_buffer.buffer, 0, sizeof(uint32_t), VK_QUERY_RESULT_WAIT_BIT);
 #endif // USE_OCCLUSION_QUERY
 
-		scene_pipeline->copyDepth(drawCmdBuffers[i], depthStencil.image);
+		//scene_pipeline->copyDepth(drawCmdBuffers[i], depthStencil.image);
 
 		VK_CHECK_RESULT(vkEndCommandBuffer(drawCmdBuffers[i]));
 	}
-}
-
-void Application::setupDescriptors()
-{
-	std::vector<VkDescriptorPoolSize> poolSizes = {
-	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
-	//vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(scene->materials.size()) * 3)
-	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(scene->images.size()))
-	};
-
-	const uint32_t maxSetCount = static_cast<uint32_t>(scene->images.size());
-	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, maxSetCount);
-	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr, &descriptorPool));
-
-	scene_pipeline->setupDescriptors(descriptorPool, sceneUBO.buffer);
 }
 
 void Application::prepareUniformBuffers()
@@ -197,8 +183,6 @@ void Application::prepare()
 		vks::tools::exitFatal("Could not get a valid function pointer for vkCmdSetDepthTestEnableEXT", -1);
 	}
 
-	//virtual_texture.prepare(vulkanDevice, 16384, 16384, 1, VK_FORMAT_R8G8B8A8_UNORM, queue);
-
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza_1/Sponza01.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/bonza/Bonza4X.gltf", queue);
 	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
@@ -226,7 +210,7 @@ void Application::prepare()
 #endif // HIZ_ENABLE
 
 	prepareUniformBuffers();
-	setupDescriptors();
+	scene_pipeline->setupDescriptors(sceneUBO.buffer);
 
 	scene_pipeline->preparePipelines(pipelineCache, renderPass);
 

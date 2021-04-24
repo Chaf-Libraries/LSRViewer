@@ -22,7 +22,7 @@ public:
 
 	void bindCommandBuffers(VkCommandBuffer& cmd_buffer, CullingPipeline& culling_pipeline);
 
-	void setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buffer& uniform_buffer);
+	void setupDescriptors(vks::Buffer& uniform_buffer);
 
 	void setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buffer& uniform_buffer, HizPipeline& hiz_pipeline);
 
@@ -36,6 +36,8 @@ public:
 	chaf::Scene& scene;
 
 	VkPipelineLayout pipelineLayout{ VK_NULL_HANDLE };
+
+	VkDescriptorPool descriptor_pool{ VK_NULL_HANDLE };
 
 	VkDescriptorSet descriptorSet{ VK_NULL_HANDLE };
 

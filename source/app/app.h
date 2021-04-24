@@ -33,8 +33,6 @@ public:
 
 	void buildCommandBuffers();
 
-	void setupDescriptors();
-
 	void prepareUniformBuffers();
 
 	void updateUniformBuffers();
@@ -72,15 +70,6 @@ private:
 
 	SceneUBO sceneUBO;
 	SceneUBO last_sceneUBO;
-
-
-	VkPipelineLayout pipelineLayout;
-	VkDescriptorSet descriptorSet;
-
-	struct DescriptorSetLayouts {
-		VkDescriptorSetLayout matrices;
-		VkDescriptorSetLayout textures;
-	} descriptorSetLayouts;
 
 	std::unique_ptr<chaf::Scene> scene{ nullptr };
 

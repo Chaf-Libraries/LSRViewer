@@ -185,6 +185,7 @@ ScenePipeline::~ScenePipeline()
 	vkDestroyPipelineLayout(device.logicalDevice, pipelineLayout, nullptr);
 	vkDestroyDescriptorSetLayout(device.logicalDevice, descriptorSetLayouts.matrices, nullptr);
 	vkDestroyDescriptorSetLayout(device.logicalDevice, descriptorSetLayouts.textures, nullptr);
+	vkDestroyDescriptorPool(device.logicalDevice, descriptor_pool, nullptr);
 
 	// Destroy depth image
 	vkDestroySampler(device, depth_image.sampler, nullptr);
@@ -293,8 +294,17 @@ void ScenePipeline::bindCommandBuffers(VkCommandBuffer& cmd_buffer, CullingPipel
 #endif // ENABLE_DESCRIPTOR_INDEXING
 
 #ifdef ENABLE_DESCRIPTOR_INDEXING
-void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buffer& uniform_buffer)
+void ScenePipeline::setupDescriptors(vks::Buffer& uniform_buffer)
 {
+	std::vector<VkDescriptorPoolSize> poolSizes = {
+	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
+	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(scene.images.size()))
+	};
+
+	const uint32_t maxSetCount = static_cast<uint32_t>(scene.images.size());
+	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, maxSetCount);
+	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr, &descriptor_pool));
+
 	// Descriptor set layout for passing matrices
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
 		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
@@ -339,7 +349,7 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &pipelineLayout));
 
 	// Descriptor set for scene matrices
-	VkDescriptorSetAllocateInfo allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.matrices, 1);
+	VkDescriptorSetAllocateInfo allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptor_pool, &descriptorSetLayouts.matrices, 1);
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet));
 	VkWriteDescriptorSet writeDescriptorSet = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0, &uniform_buffer.descriptor);
 	vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
@@ -353,7 +363,7 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 	variableDescriptorCountAllocInfo.pDescriptorCounts = variableDescCounts;
 
 	// Descriptor set for bindless texture
-	allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.textures, 1);
+	allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptor_pool, &descriptorSetLayouts.textures, 1);
 	allocInfo.pNext = &variableDescriptorCountAllocInfo;
 
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &scene.bindless_descriptor_set));
@@ -380,8 +390,17 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 }
 
 #else
-void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buffer& uniform_buffer)
+void ScenePipeline::setupDescriptors(vks::Buffer& uniform_buffer)
 {
+	std::vector<VkDescriptorPoolSize> poolSizes = {
+	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
+	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(scene.materials.size()) * 3)
+	};
+
+	const uint32_t maxSetCount = static_cast<uint32_t>(scene.images.size());
+	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, maxSetCount);
+	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr, &descriptor_pool));
+
 	// Descriptor set layout for passing matrices
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
 		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
@@ -413,14 +432,14 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &pipelineLayout));
 
 	// Descriptor set for scene matrices
-	VkDescriptorSetAllocateInfo allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.matrices, 1);
+	VkDescriptorSetAllocateInfo allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptor_pool, &descriptorSetLayouts.matrices, 1);
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet));
 	VkWriteDescriptorSet writeDescriptorSet = vks::initializers::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 0, &uniform_buffer.descriptor);
 	vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
 
 	// Descriptor sets for materials
 	for (auto& material : scene.materials) {
-		const VkDescriptorSetAllocateInfo allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.textures, 1);
+		const VkDescriptorSetAllocateInfo allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptor_pool, &descriptorSetLayouts.textures, 1);
 		VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &material.descriptorSet));
 
 		VkDescriptorImageInfo colorMap = scene.images[material.baseColorTextureIndex].texture.descriptor;
