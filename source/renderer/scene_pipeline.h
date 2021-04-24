@@ -9,7 +9,7 @@
 #include <scene/scene.h>
 
 //#define ENABLE_DEFERRED
-//#define ENABLE_DESCRIPTOR_INDEXING
+#define ENABLE_DESCRIPTOR_INDEXING
 
 class ScenePipeline :public chaf::PipelineBase
 {

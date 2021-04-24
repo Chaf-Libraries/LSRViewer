@@ -142,7 +142,8 @@ void Application::setupDescriptors()
 {
 	std::vector<VkDescriptorPoolSize> poolSizes = {
 	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
-	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(scene->materials.size()) * 3)
+	//vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(scene->materials.size()) * 3)
+	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(scene->images.size()))
 	};
 
 	const uint32_t maxSetCount = static_cast<uint32_t>(scene->images.size());

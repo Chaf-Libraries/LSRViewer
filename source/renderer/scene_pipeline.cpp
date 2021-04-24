@@ -15,11 +15,9 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 	if (mesh.getPrimitives().size() > 0) {
 		// Pass the node's matrix via push constants
 		// Traverse the node hierarchy to the top-most parent to get the final matrix of the current node
-		glm::mat4 nodeMatrix = transform.getWorldMatrix();
+		auto& model = transform.getWorldMatrix();
 		auto currentParent = node->getParent();
 
-		// Pass the final matrix to the vertex shader using push constants
-		vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
 		for (auto& primitive : mesh.getPrimitives())
 		{
 			chaf::AABB world_bounds = { primitive.bbox.getMin(), primitive.bbox.getMax() };
@@ -33,6 +31,7 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 				auto& material = node->getScene().materials[primitive.material_index];
 				// POI: Bind the pipeline for the node's material
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
 				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &material.descriptorSet, 0, nullptr);
 				vkCmdDrawIndexed(commandBuffer, primitive.index_count, 1, primitive.first_index, 0, 0);
 			}
@@ -60,11 +59,9 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 	{
 		// Pass the node's matrix via push constants
 		// Traverse the node hierarchy to the top-most parent to get the final matrix of the current node
-		glm::mat4 nodeMatrix = transform.getWorldMatrix();
+		auto& model = transform.getWorldMatrix();
 		auto currentParent = node->getParent();
-
-		// Pass the final matrix to the vertex shader using push constants
-		vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
+		
 		for (uint32_t i = 0; i < mesh.getPrimitives().size(); i++)
 		{
 			auto& primitive = mesh.getPrimitives()[i];
@@ -74,6 +71,7 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 				auto& material = node->getScene().materials[primitive.material_index];
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
 				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &material.descriptorSet, 0, nullptr);
 
 #ifdef USE_OCCLUSION_QUERY
@@ -100,11 +98,9 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 	if (mesh.getPrimitives().size() > 0) {
 		// Pass the node's matrix via push constants
 		// Traverse the node hierarchy to the top-most parent to get the final matrix of the current node
-		glm::mat4 nodeMatrix = transform.getWorldMatrix();
+		auto& model = transform.getWorldMatrix();
 		auto currentParent = node->getParent();
 
-		// Pass the final matrix to the vertex shader using push constants
-		vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
 		for (auto& primitive : mesh.getPrimitives())
 		{
 			chaf::AABB world_bounds = { primitive.bbox.getMin(), primitive.bbox.getMax() };
@@ -118,7 +114,13 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 				auto& material = node->getScene().materials[primitive.material_index];
 				// POI: Bind the pipeline for the node's material
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
-				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &material.descriptorSet, 0, nullptr);
+
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+
+				std::vector<uint32_t> texture_index = { material.baseColorTextureIndex, material.normalTextureIndex };
+
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t) * 2, texture_index.data());
+
 				vkCmdDrawIndexed(commandBuffer, primitive.index_count, 1, primitive.first_index, 0, 0);
 			}
 			else
@@ -145,11 +147,9 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 	{
 		// Pass the node's matrix via push constants
 		// Traverse the node hierarchy to the top-most parent to get the final matrix of the current node
-		glm::mat4 nodeMatrix = transform.getWorldMatrix();
+		auto model = transform.getWorldMatrix();
 		auto currentParent = node->getParent();
 
-		// Pass the final matrix to the vertex shader using push constants
-		vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &nodeMatrix);
 		for (uint32_t i = 0; i < mesh.getPrimitives().size(); i++)
 		{
 			auto& primitive = mesh.getPrimitives()[i];
@@ -159,7 +159,12 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 				auto& material = node->getScene().materials[primitive.material_index];
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
-				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &material.descriptorSet, 0, nullptr);
+
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+
+				std::vector<uint32_t> texture_index = { material.baseColorTextureIndex, material.normalTextureIndex };
+
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(uint32_t) * 2, texture_index.data());
 
 				vkCmdDrawIndexedIndirect(commandBuffer, culling_pipeline.indirect_command_buffer.buffer, culling_pipeline.id_lookup[node->getID()][i] * sizeof(VkDrawIndexedIndirectCommand), 1, sizeof(VkDrawIndexedIndirectCommand));		
 			}
@@ -169,9 +174,6 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 
 
 #endif
-
-
-
 
 ScenePipeline::ScenePipeline(vks::VulkanDevice& device, chaf::Scene& scene) :
 	chaf::PipelineBase{ device }, scene{ scene }
@@ -191,6 +193,7 @@ ScenePipeline::~ScenePipeline()
 	vkFreeMemory(device, depth_image.mem, nullptr);
 }
 
+#ifndef ENABLE_DESCRIPTOR_INDEXING
 void ScenePipeline::bindCommandBuffers(VkCommandBuffer& cmd_buffer, chaf::Frustum& frustum)
 {
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
@@ -225,9 +228,6 @@ void ScenePipeline::bindCommandBuffers(VkCommandBuffer& cmd_buffer, CullingPipel
 		vkCmdBindVertexBuffers(cmd_buffer, 0, 1, &scene.buffer_cacher->getVBO(0).buffer, offsets);
 		vkCmdBindIndexBuffer(cmd_buffer, scene.buffer_cacher->getEBO(0).buffer, 0, VK_INDEX_TYPE_UINT32);
 	}
-	
-	// Render all nodes at top-level
-	
 
 	for (auto& node : scene.getNodes())
 	{
@@ -241,6 +241,56 @@ void ScenePipeline::bindCommandBuffers(VkCommandBuffer& cmd_buffer, CullingPipel
 		}
 	}
 }
+#else
+void ScenePipeline::bindCommandBuffers(VkCommandBuffer& cmd_buffer, chaf::Frustum& frustum)
+{
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+
+	VkDeviceSize offsets[1] = { 0 };
+
+	if (scene.buffer_cacher->hasVBO(0) && scene.buffer_cacher->hasEBO(0))
+	{
+		vkCmdBindVertexBuffers(cmd_buffer, 0, 1, &scene.buffer_cacher->getVBO(0).buffer, offsets);
+		vkCmdBindIndexBuffer(cmd_buffer, scene.buffer_cacher->getEBO(0).buffer, 0, VK_INDEX_TYPE_UINT32);
+	}
+
+	// Render all nodes at top-level
+	for (auto& node : scene.getNodes())
+	{
+		if (node->hasComponent<chaf::Mesh>())
+		{
+			// CPU culling
+			drawNode(cmd_buffer, pipelineLayout, &*node, frustum);
+		}
+	}
+}
+
+void ScenePipeline::bindCommandBuffers(VkCommandBuffer& cmd_buffer, CullingPipeline& culling_pipeline)
+{
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &scene.bindless_descriptor_set, 0, nullptr);
+
+	VkDeviceSize offsets[1] = { 0 };
+
+	if (scene.buffer_cacher->hasVBO(0) && scene.buffer_cacher->hasEBO(0))
+	{
+		vkCmdBindVertexBuffers(cmd_buffer, 0, 1, &scene.buffer_cacher->getVBO(0).buffer, offsets);
+		vkCmdBindIndexBuffer(cmd_buffer, scene.buffer_cacher->getEBO(0).buffer, 0, VK_INDEX_TYPE_UINT32);
+	}
+
+	for (auto& node : scene.getNodes())
+	{
+		if (node->hasComponent<chaf::Mesh>())
+		{
+			// GPU culling
+			if (scene.buffer_cacher->hasVBO(0) && scene.buffer_cacher->hasEBO(0))
+			{
+				drawNode(cmd_buffer, pipelineLayout, &*node, culling_pipeline);
+			}
+		}
+	}
+}
+#endif // ENABLE_DESCRIPTOR_INDEXING
 
 #ifdef ENABLE_DESCRIPTOR_INDEXING
 void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buffer& uniform_buffer)
@@ -255,18 +305,16 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 
 	// Descriptor set layout for passing material textures
 	setLayoutBindings = {
-		// Color map
-		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0),
-		// Normal map
-		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 1),
+		// binding all textures
+		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_cast<uint32_t>(scene.images.size()))
 	};
 	descriptorSetLayoutCI.pBindings = setLayoutBindings.data();
-	descriptorSetLayoutCI.bindingCount = 2;
+	descriptorSetLayoutCI.bindingCount = 1;
 
 	// The fragment shader will be using an unsized array of samplers, which has to be marked with the VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT
 	VkDescriptorSetLayoutBindingFlagsCreateInfoEXT setLayoutBindingFlags{};
 	setLayoutBindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
-	setLayoutBindingFlags.bindingCount = 2;
+	setLayoutBindingFlags.bindingCount = 1;
 	std::vector<VkDescriptorBindingFlagsEXT> descriptorBindingFlags = {
 		0,
 		VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT
@@ -280,10 +328,14 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 	std::array<VkDescriptorSetLayout, 2> setLayouts = { descriptorSetLayouts.matrices, descriptorSetLayouts.textures };
 	VkPipelineLayoutCreateInfo pipelineLayoutCI = vks::initializers::pipelineLayoutCreateInfo(setLayouts.data(), static_cast<uint32_t>(setLayouts.size()));
 	// We will use push constants to push the local matrices of a primitive to the vertex shader
-	VkPushConstantRange pushConstantRange = vks::initializers::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), 0);
+
+	std::vector<VkPushConstantRange> pushConstantRanges = {
+		vks::initializers::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), 0),
+		vks::initializers::pushConstantRange(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(uint32_t) * 2, sizeof(glm::mat4))
+	};
 	// Push constant ranges are part of the pipeline layout
-	pipelineLayoutCI.pushConstantRangeCount = 1;
-	pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
+	pipelineLayoutCI.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
+	pipelineLayoutCI.pPushConstantRanges = pushConstantRanges.data();
 	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &pipelineLayout));
 
 	// Descriptor set for scene matrices
@@ -301,8 +353,8 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 	variableDescriptorCountAllocInfo.pDescriptorCounts = variableDescCounts;
 
 	// Descriptor set for bindless texture
-	VkDescriptorSetAllocateInfo allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.textures, 1);
-	allocInfo.pNext = &variableDescCounts;
+	allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.textures, 1);
+	allocInfo.pNext = &variableDescriptorCountAllocInfo;
 
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &scene.bindless_descriptor_set));
 
@@ -314,10 +366,9 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 		textureDescriptors[i].imageView = scene.images[i].texture.view;
 	}
 
-	VkWriteDescriptorSet writeDescriptorSet;
 	writeDescriptorSet = {};
 	writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	writeDescriptorSet.dstBinding = 1;
+	writeDescriptorSet.dstBinding = 0;
 	writeDescriptorSet.dstArrayElement = 0;
 	writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	writeDescriptorSet.descriptorCount = static_cast<uint32_t>(scene.images.size());
@@ -358,6 +409,7 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 	// Push constant ranges are part of the pipeline layout
 	pipelineLayoutCI.pushConstantRangeCount = 1;
 	pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
+
 	VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutCI, nullptr, &pipelineLayout));
 
 	// Descriptor set for scene matrices
@@ -423,7 +475,7 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 
 	// Descriptor sets for materials
 	for (auto& material : scene.materials) {
-		const VkDescriptorSetAllocateInfo allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.textures, 1);
+		allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptorPool, &descriptorSetLayouts.textures, 1);
 		VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &material.descriptorSet));
 
 		VkDescriptorImageInfo colorMap = scene.images[material.baseColorTextureIndex].texture.descriptor;
@@ -481,9 +533,13 @@ void ScenePipeline::preparePipelines(VkPipelineCache& pipeline_cache, VkRenderPa
 	pipelineCI.pDynamicState = &dynamicStateCI;
 	pipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
 	pipelineCI.pStages = shaderStages.data();
-
+#ifndef ENABLE_DESCRIPTOR_INDEXING
 	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+#else
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+#endif
 
 	for (auto& material : scene.materials)
 	{
