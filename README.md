@@ -20,6 +20,11 @@ Large  Scene Rendering Viewer
 * [Vulkan](https://github.com/SaschaWillems/Vulkan)
 * [CTPL](https://github.com/vit-vit/CTPL)
 * [entt](https://github.com/skypjack/entt)
+* [astc-encoder](https://github.com/ARM-software/astc-encoder)
+* [glslang](https://github.com/KhronosGroup/glslang)
+* [spirv-cross](https://github.com/KhronosGroup/SPIRV-Cross)
+* [stb](https://github.com/nothings/stb)
+* [tinygltf](https://github.com/syoyo/tinygltf/)
 
 ## 构建方法
 
@@ -35,8 +40,8 @@ Large  Scene Rendering Viewer
 
 ## TODO
 
-- [ ] Indirect Draw
-- [ ] Sparse Virtual Texture
-- [ ] Stream Loading
-- [ ] Cluster Occlusion Culling
+- [x] Indirect Draw
+- [x] Bindless Texture (Descriptor indexing)
+- [x] GPU Hi-z Occlusion Culling
+- [x] Tessellation
 
