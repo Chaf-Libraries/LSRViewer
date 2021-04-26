@@ -23,7 +23,7 @@ struct IndexedIndirectCommand
 };
 
 // Binding 1: Multi draw output
-layout (binding = 1, std430) writeonly buffer IndirectDraws
+layout (binding = 1, std430) buffer IndirectDraws
 {
 	IndexedIndirectCommand indirectDraws[ ];
 };
@@ -36,6 +36,7 @@ layout (binding = 2) uniform UBO
 	vec4 lightPos;
 	vec4 viewPos;
     vec4 frustum[6];
+    vec2 range;
 } ubo;
 
 // Binding 3: Indirect draw stats
@@ -44,8 +45,15 @@ layout (binding = 3) buffer UBOOut
 	uint drawCount[ ];
 } uboOut;
 
-layout (local_size_x = 1) in;
+// Binding 4: occlusion query result buffer
+layout (binding = 4) buffer QueryResult
+{
+	uint queryResult[ ];
+};
 
+layout (local_size_x = 32) in;
+
+// Frustum Culling for bounding sphere
 bool checkSphere(vec3 pos, float radius)
 {
     for (uint i = 0; i < 6; i++)
@@ -58,6 +66,7 @@ bool checkSphere(vec3 pos, float radius)
     return true;
 }
 
+// Frustum Culling for AABB
 bool checkAABB(vec3 min_val, vec3 max_val)
 {
 	vec3 pos = (min_val + max_val)/2.0;
@@ -94,20 +103,18 @@ bool checkAABB(vec3 min_val, vec3 max_val)
     return true;
 }
 
-layout (local_size_x = 1) in;
-
 void main()
 {
 	uint idx = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
 
-	if (checkAABB(instances[idx].min_, instances[idx].max_))
-	{
-		indirectDraws[idx].instanceCount = 1;
-        uboOut.drawCount[idx] = uint(abs(instances[idx].min_.x)*1000);
-	}
-	else
-	{
-		indirectDraws[idx].instanceCount = 0;
+    if (checkAABB(instances[idx].min_, instances[idx].max_))
+    {
+        indirectDraws[idx].instanceCount = 1;
+        uboOut.drawCount[idx] = 1;
+    }
+    else
+    {
+        indirectDraws[idx].instanceCount = 0;
         uboOut.drawCount[idx] = 0;
-	}
+    }
 }
