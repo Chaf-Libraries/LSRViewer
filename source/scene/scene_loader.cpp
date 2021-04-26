@@ -9,14 +9,19 @@
 #include <scene/components/camera.h>
 #include <scene/components/mesh.h>
 #include <scene/components/image.h>
+#include <scene/components/light.h>
 #include <scene/components/virtual_texture.h>
 
 #include <filesystem>
 #include <iostream>
 
 #include <glm/gtc/type_ptr.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/quaternion.hpp>
 
 #include <vulkan/vulkan.h>
+
+#define KHR_LIGHTS_PUNCTUAL_EXTENSION "KHR_lights_punctual"
 
 namespace chaf
 {
@@ -72,6 +77,7 @@ namespace chaf
 			parseTransform(gltf_node, node);
 			parseCamera(model, gltf_node, node);
 			parseMesh(model, gltf_node, node);
+			parseExtensions(model, gltf_node, node);
 		}
 
 		auto& nodes = scene.getNodes();
@@ -289,17 +295,6 @@ namespace chaf
 		{
 			tinygltf::Image& glTFImage = model.images[i];
 			scene.images[i].texture.loadFromFile(path + "/" + glTFImage.uri, &device, copy_queue);
-			
-			
-			/*auto img = Image::load(path + "/" + glTFImage.uri);
-			if (img->isAstc())
-			{
-				if (!img->checkFormatSupport(device))
-				{
-					img = std::make_unique<Astc>(*img);
-					img->generateMipmap();
-				}
-			}*/
 		}
 	}
 
@@ -339,5 +334,97 @@ namespace chaf
 			scene.materials[i].alphaCutOff = (float)glTFMaterial.alphaCutoff;
 			scene.materials[i].doubleSided = glTFMaterial.doubleSided;
 		}
+	}
+
+	void SceneLoader::parseExtensions(tinygltf::Model& model, tinygltf::Node& gltf_node, Node& node)
+	{
+		for (auto& gltf_ext : gltf_node.extensions)
+		{
+			if (gltf_ext.first == KHR_LIGHTS_PUNCTUAL_EXTENSION)
+			{
+				parseLight(model, gltf_node, node);
+			}
+		}
+	}
+
+	void SceneLoader::parseLight(tinygltf::Model& model, tinygltf::Node& gltf_node, Node& node)
+	{
+		auto& khr_lights = model.extensions.at(KHR_LIGHTS_PUNCTUAL_EXTENSION).Get("lights");
+		auto& khr_light = khr_lights.Get(gltf_node.extensions.at(KHR_LIGHTS_PUNCTUAL_EXTENSION).Get("light").Get<int>());
+
+		if (!khr_light.Has("type"))
+		{
+			throw std::runtime_error("KHR_lights_punctual extension: light doesn't have a type!");
+		}
+
+		auto& light = node.addComponent<Light>();
+
+		auto gltf_light_type = khr_light.Get("type").Get<std::string>();
+
+		// Setting light type
+		if (gltf_light_type == "point")
+		{
+			light.setType(LightType::Point);
+		}
+		else if (gltf_light_type == "spot")
+		{
+			light.setType(LightType::Spot);
+		}
+		else if (gltf_light_type == "directional")
+		{
+			light.setType(LightType::Directional);
+		}
+		else
+		{
+			assert("Unsupport light type!");
+		}
+
+		LightProperties properties;
+
+		// Setting light color
+		if (khr_light.Has("color"))
+		{
+			properties.color = glm::vec3(
+				static_cast<float>(khr_light.Get("color").Get(0).Get<double>()),
+				static_cast<float>(khr_light.Get("color").Get(1).Get<double>()),
+				static_cast<float>(khr_light.Get("color").Get(2).Get<double>()));
+		}
+
+		// Setting light intensity
+		if (khr_light.Has("intensity"))
+		{
+			properties.intensity = static_cast<float>(khr_light.Get("intensity").Get<double>());
+		}
+
+		// Setting other light properties
+		if (light.getType() != LightType::Directional)
+		{
+			properties.range = static_cast<float>(khr_light.Get("range").Get<double>());
+
+			if (light.getType() == LightType::Spot)
+			{
+				if (!khr_light.Has("spot"))
+				{
+					throw std::runtime_error("KHR_lights_punctual extension: spot light doesn't have a 'spot' property set!");
+				}
+
+				properties.inner_cone_angle = static_cast<float>(khr_light.Get("spot").Get("innerConeAngle").Get<double>());
+
+				if (khr_light.Get("spot").Has("outerConeAngle"))
+				{
+					properties.outer_cone_angle = static_cast<float>(khr_light.Get("spot").Get("outerConeAngle").Get<double>());
+				}
+				else
+				{
+					properties.outer_cone_angle = glm::pi<float>() / 4.0f;
+				}
+			}
+		}
+		else if (light.getType() == LightType::Directional || light.getType() == LightType::Spot)
+		{
+			properties.direction = glm::vec4(0.0f, 0.0f, -1.0f, 1.f);
+		}
+
+		light.setProperties(properties);
 	}
 }

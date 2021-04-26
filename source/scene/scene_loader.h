@@ -29,6 +29,8 @@ namespace chaf
 		static void parseImages(vks::VulkanDevice& device, tinygltf::Model& model, Scene& scene, VkQueue copy_queue);
 		static void parseTextures(tinygltf::Model& model, Scene& scene);
 		static void parseMaterials(tinygltf::Model& model, Scene& scene);
+		static void parseExtensions(tinygltf::Model& model, tinygltf::Node& gltf_node, Node& node);
+		static void parseLight(tinygltf::Model& model, tinygltf::Node& gltf_node, Node& node);
 
 	public:
 		static std::vector<uint32_t> index_buffer;

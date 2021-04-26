@@ -133,7 +133,9 @@ void Application::buildCommandBuffers()
 		vkCmdCopyQueryPoolResults(drawCmdBuffers[i], culling_pipeline->query_pool, 0, culling_pipeline->primitive_count, culling_pipeline->query_result_buffer.buffer, 0, sizeof(uint32_t), VK_QUERY_RESULT_WAIT_BIT);
 #endif // USE_OCCLUSION_QUERY
 
-		//scene_pipeline->copyDepth(drawCmdBuffers[i], depthStencil.image);
+#ifdef HIZ_ENABLE
+		scene_pipeline->copyDepth(drawCmdBuffers[i], depthStencil.image);
+#endif
 
 		VK_CHECK_RESULT(vkEndCommandBuffer(drawCmdBuffers[i]));
 	}
@@ -184,6 +186,7 @@ void Application::prepare()
 	}
 
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza_1/Sponza01.gltf", queue);
+	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/simple.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/bonza/Bonza4X.gltf", queue);
 	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
 
@@ -261,6 +264,15 @@ void Application::getEnabledFeatures()
 	else 
 	{
 		std::cout << "Sparse binding not supported" << std::endl;
+	}
+
+	// Tessellation
+	if (deviceFeatures.tessellationShader) 
+	{
+		enabledFeatures.tessellationShader = VK_TRUE;
+	}
+	else {
+		vks::tools::exitFatal("Selected GPU does not support tessellation shaders!", VK_ERROR_FEATURE_NOT_PRESENT);
 	}
 }
 
@@ -375,7 +387,6 @@ void Application::render()
 	if (camera.updated) 
 	{
 		updateUniformBuffers();
-		//buildCommandBuffers();
 	}
 }
 
@@ -424,7 +435,7 @@ void Application::updateOverlay()
 	ImGui::Text("frame count: %d", count);
 	ImGui::Checkbox("begin benckmark", &begin);
 
-	#if defined(_DEBUG) && defined(VIS_HIZ)
+#if defined(_DEBUG) && defined(VIS_HIZ)
 	for (uint32_t i = 0; i < culling_pipeline->primitive_count; i++)
 	{
 		ImGui::Text("depth: %.3f, maxZ: %.3f , visibility: %d", culling_pipeline->debug_depth.depth[i], culling_pipeline->debug_z.z[i], culling_pipeline->indirect_status.draw_count[i]);

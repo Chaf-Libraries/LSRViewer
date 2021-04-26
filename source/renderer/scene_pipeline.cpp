@@ -31,7 +31,11 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 				auto& material = node->getScene().materials[primitive.material_index];
 				// POI: Bind the pipeline for the node's material
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
+#ifdef USE_TESSELLATION
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+#else
 				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+#endif // USE_TESSELLATION
 				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &material.descriptorSet, 0, nullptr);
 				vkCmdDrawIndexed(commandBuffer, primitive.index_count, 1, primitive.first_index, 0, 0);
 			}
@@ -71,7 +75,13 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 				auto& material = node->getScene().materials[primitive.material_index];
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
+#ifdef USE_TESSELLATION
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+#else
 				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+#endif // USE_TESSELLATION
+
+				
 				vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &material.descriptorSet, 0, nullptr);
 
 #ifdef USE_OCCLUSION_QUERY
@@ -115,11 +125,19 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 				// POI: Bind the pipeline for the node's material
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
 
+#ifdef USE_TESSELLATION
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+#else
 				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
-
+#endif // USE_TESSELLATION
+#ifdef ENABLE_DESCRIPTOR_INDEXING
 				std::vector<uint32_t> texture_index = { material.baseColorTextureIndex, material.normalTextureIndex };
-
-				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(uint32_t) * 2, texture_index.data());
+#ifdef USE_TESSELLATION
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(uint32_t) * 2, texture_index.data());
+#else
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(uint32_t) * 2, texture_index.data());
+#endif // USE_TESSELLATION
+#endif // ENABLE_DESCRIPTOR_INDEXING
 
 				vkCmdDrawIndexed(commandBuffer, primitive.index_count, 1, primitive.first_index, 0, 0);
 			}
@@ -160,12 +178,19 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
 
+#ifdef USE_TESSELLATION
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
+#else
 				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &model);
-
+#endif // USE_TESSELLATION
+#ifdef ENABLE_DESCRIPTOR_INDEXING
 				std::vector<uint32_t> texture_index = { material.baseColorTextureIndex, material.normalTextureIndex };
-
+#ifdef USE_TESSELLATION
 				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(uint32_t) * 2, texture_index.data());
-
+#else
+				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(glm::mat4), sizeof(uint32_t) * 2, texture_index.data());
+#endif // USE_TESSELLATION
+#endif // ENABLE_DESCRIPTOR_INDEXING
 				vkCmdDrawIndexedIndirect(commandBuffer, culling_pipeline.indirect_command_buffer.buffer, culling_pipeline.id_lookup[node->getID()][i] * sizeof(VkDrawIndexedIndirectCommand), 1, sizeof(VkDrawIndexedIndirectCommand));		
 			}
 		}
@@ -307,7 +332,7 @@ void ScenePipeline::setupDescriptors(vks::Buffer& uniform_buffer)
 
 	// Descriptor set layout for passing matrices
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
-		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS, 0)
 	};
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings.data(), static_cast<uint32_t>(setLayoutBindings.size()));
 
@@ -340,8 +365,14 @@ void ScenePipeline::setupDescriptors(vks::Buffer& uniform_buffer)
 	// We will use push constants to push the local matrices of a primitive to the vertex shader
 
 	std::vector<VkPushConstantRange> pushConstantRanges = {
+		
+#ifdef USE_TESSELLATION
+		vks::initializers::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, sizeof(glm::mat4), 0),
+		vks::initializers::pushConstantRange(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(uint32_t) * 2, sizeof(glm::mat4))
+#else
 		vks::initializers::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), 0),
 		vks::initializers::pushConstantRange(VK_SHADER_STAGE_FRAGMENT_BIT, sizeof(uint32_t) * 2, sizeof(glm::mat4))
+#endif // USE_TESSELLATION
 	};
 	// Push constant ranges are part of the pipeline layout
 	pipelineLayoutCI.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
@@ -403,7 +434,7 @@ void ScenePipeline::setupDescriptors(vks::Buffer& uniform_buffer)
 
 	// Descriptor set layout for passing matrices
 	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
-		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0)
+		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS, 0)
 	};
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings.data(), static_cast<uint32_t>(setLayoutBindings.size()));
 
@@ -424,7 +455,12 @@ void ScenePipeline::setupDescriptors(vks::Buffer& uniform_buffer)
 	std::array<VkDescriptorSetLayout, 2> setLayouts = { descriptorSetLayouts.matrices, descriptorSetLayouts.textures };
 	VkPipelineLayoutCreateInfo pipelineLayoutCI = vks::initializers::pipelineLayoutCreateInfo(setLayouts.data(), static_cast<uint32_t>(setLayouts.size()));
 	// We will use push constants to push the local matrices of a primitive to the vertex shader
+#ifdef USE_TESSELLATION
+	VkPushConstantRange pushConstantRange = vks::initializers::pushConstantRange(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT | VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), 0);
+#else
 	VkPushConstantRange pushConstantRange = vks::initializers::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), 0);
+#endif // USE_TESSELLATION
+
 	// Push constant ranges are part of the pipeline layout
 	pipelineLayoutCI.pushConstantRangeCount = 1;
 	pipelineLayoutCI.pPushConstantRanges = &pushConstantRange;
@@ -518,7 +554,12 @@ void ScenePipeline::setupDescriptors(VkDescriptorPool& descriptorPool, vks::Buff
 
 void ScenePipeline::preparePipelines(VkPipelineCache& pipeline_cache, VkRenderPass& render_pass)
 {
+#ifdef USE_TESSELLATION
+	VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCI = vks::initializers::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 0, VK_FALSE);
+#else
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCI = vks::initializers::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, VK_FALSE);
+#endif // USE_TESSELLATION
+
 	VkPipelineRasterizationStateCreateInfo rasterizationStateCI = vks::initializers::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT, VK_FRONT_FACE_COUNTER_CLOCKWISE, 0);
 	VkPipelineColorBlendAttachmentState blendAttachmentStateCI = vks::initializers::pipelineColorBlendAttachmentState(0xf, VK_FALSE);
 	VkPipelineColorBlendStateCreateInfo colorBlendStateCI = vks::initializers::pipelineColorBlendStateCreateInfo(1, &blendAttachmentStateCI);
@@ -527,7 +568,12 @@ void ScenePipeline::preparePipelines(VkPipelineCache& pipeline_cache, VkRenderPa
 	VkPipelineMultisampleStateCreateInfo multisampleStateCI = vks::initializers::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT, 0);
 	const std::vector<VkDynamicState> dynamicStateEnables = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 	VkPipelineDynamicStateCreateInfo dynamicStateCI = vks::initializers::pipelineDynamicStateCreateInfo(dynamicStateEnables.data(), static_cast<uint32_t>(dynamicStateEnables.size()), 0);
+#ifdef USE_TESSELLATION
+	VkPipelineTessellationStateCreateInfo tessellationStateCI = vks::initializers::pipelineTessellationStateCreateInfo(3);
+	std::array<VkPipelineShaderStageCreateInfo, 4> shaderStages;
+#else
 	std::array<VkPipelineShaderStageCreateInfo, 2> shaderStages;
+#endif
 
 	const std::vector<VkVertexInputBindingDescription> vertexInputBindings = {
 		vks::initializers::vertexInputBindingDescription(0, sizeof(chaf::Vertex), VK_VERTEX_INPUT_RATE_VERTEX),
@@ -550,15 +596,34 @@ void ScenePipeline::preparePipelines(VkPipelineCache& pipeline_cache, VkRenderPa
 	pipelineCI.pViewportState = &viewportStateCI;
 	pipelineCI.pDepthStencilState = &depthStencilStateCI;
 	pipelineCI.pDynamicState = &dynamicStateCI;
+#ifdef USE_TESSELLATION
+	pipelineCI.pTessellationState = &tessellationStateCI;
+#endif
 	pipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
 	pipelineCI.pStages = shaderStages.data();
-#ifndef ENABLE_DESCRIPTOR_INDEXING
-	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+#ifdef USE_TESSELLATION
+#ifdef ENABLE_DESCRIPTOR_INDEXING
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing_tes.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing_tes.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	shaderStages[2] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing_tes.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+	shaderStages[3] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing_tes.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
 #else
-	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-#endif
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_tes.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_tes.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	shaderStages[2] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_tes.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+	shaderStages[3] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_tes.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+#endif // ENABLE_DESCRIPTOR_INDEXING
+#else
+#ifdef ENABLE_DESCRIPTOR_INDEXING
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+#else
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+#endif // ENABLE_DESCRIPTOR_INDEXING
+
+#endif // USE_TESSELLATION
 
 	for (auto& material : scene.materials)
 	{

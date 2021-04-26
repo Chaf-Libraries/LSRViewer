@@ -113,11 +113,11 @@ void HizPipeline::prepareHiz()
 	sampler.minLod = 0; 
 	sampler.maxLod = static_cast<float>(hiz_image.depth_pyramid_levels);
 
-	VkSamplerReductionModeCreateInfoEXT createInfoReduction = {};
+	//VkSamplerReductionModeCreateInfoEXT createInfoReduction = {};
 
-	createInfoReduction.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT;
-	createInfoReduction.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
-	sampler.pNext = &createInfoReduction;
+	//createInfoReduction.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT;
+	//createInfoReduction.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
+	//sampler.pNext = &createInfoReduction;
 
 	VK_CHECK_RESULT(vkCreateSampler(device, &sampler, 0, &hiz_image.sampler));
 }
@@ -228,7 +228,7 @@ void HizPipeline::prepare(VkPipelineCache& pipeline_cache)
 
 	// Create pipeline
 	VkComputePipelineCreateInfo computePipelineCreateInfo = vks::initializers::computePipelineCreateInfo(pipeline_layout, 0);
-	computePipelineCreateInfo.stage = loadShader("../data/shaders/glsl/gpudrivenpipeline/hiz.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);;
+	computePipelineCreateInfo.stage = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/hiz.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);;
 
 	VK_CHECK_RESULT(vkCreateComputePipelines(device.logicalDevice, pipeline_cache, 1, &computePipelineCreateInfo, nullptr, &pipeline));
 
