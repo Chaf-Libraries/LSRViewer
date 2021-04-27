@@ -73,13 +73,6 @@ void main()
     outTangent = interpolation(inTangent[0], inTangent[1], inTangent[2]);
     outTBN = interpolation(inTBN[0], inTBN[1], inTBN[2]);
 
-    // outUV = u * inUV[0] + v * inUV[1] + w * inUV[2];
-    // //outTBN =u* inTBN[0] + v * inTBN[1] + w * inTBN[2];
-
-    // outViewVec = u* inViewVec[0] + v * inViewVec[1] + w * inViewVec[2];
-    // outLightVec = u* inLightVec[0] + v * inLightVec[1] + w * inLightVec[2];
-    // outNormal = u* inNormal[0] + v * inNormal[1] + w * inNormal[2];
-    // outTangent = u* inTangent[0] + v * inTangent[1] + w * inTangent[2];
   
     vec3 N = normalize(outNormal);
 	vec3 T = normalize(outTangent.xyz);
@@ -92,18 +85,6 @@ void main()
     vec3 P3= inPosPatch.pos[6] * u + inPosPatch.pos[7] * v + inPosPatch.pos[8] * w;
 
     outPos = P1 * u+ P2 * v + P3 * w;
-    //outPos = inPosPatch1[0] * u+ inPosPatch2[1] * v + inPosPatch1[2] * w;
-	
-	// float h = 0;//texture(height_texture, te_out.TEX).r;
-	// // vec3 N = normalize(outTBN[2]);
-	// //0.02是置换强度,可以调整
-	// //outPos += 0.02*(h * 2 - 1) * N;
-    //     gl_Position = (gl_TessCoord.x * gl_in[0].gl_Position) +
-    //               (gl_TessCoord.y * gl_in[1].gl_Position) +
-    //               (gl_TessCoord.z * gl_in[2].gl_Position);
-    // gl_Position = uboScene.projection * uboScene.view * primitive.model* gl_Position;
-
-
 
     //outPos = P1;  
     gl_Position = vec4(outPos, 1.0);

@@ -219,7 +219,7 @@ bool HizCheck(vec3 min_val, vec3 max_val, uint idx)
 
     float sphereSizeX=(max_x - min_x)*ubo.range.x;
     float sphereSizeY=(max_y - min_y)*ubo.range.y;
-    if(sphereSizeX * sphereSizeY < 1)
+    if(sphereSizeX * sphereSizeY < 100)
     {
         return false;
     }

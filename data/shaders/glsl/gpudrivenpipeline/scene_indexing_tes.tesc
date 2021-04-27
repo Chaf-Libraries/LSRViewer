@@ -56,7 +56,7 @@ float ComputeTessLevel(vec3 p0, vec3 p1)
     float diameter = sqrt(d.x*d.x+d.y*d.y);
 	
 	//这里的20控制细分层次,可以根据屏幕大小等调整
-   float tessLevel = max(1.0,   ceil(20*diameter));
+   float tessLevel = max(1.0,   ceil(uboScene.range.x*diameter/10));
    
    return min(tessLevel, 20);
 }

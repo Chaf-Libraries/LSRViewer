@@ -27,6 +27,7 @@ layout(push_constant) uniform TextureIndexPushConsts {
 void main() 
 {
 	//texture(textures[nonuniformEXT(inTexIndex)], inUV);
+	// vec4 color = texture(textureArray[nonuniformEXT(textureIndex.baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
 	vec4 color = texture(textureArray[nonuniformEXT(textureIndex.baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
 
 	if (ALPHA_MASK) {

@@ -58,7 +58,7 @@ bool checkSphere(vec3 pos, float radius)
 {
     for (uint i = 0; i < 6; i++)
     {
-        if ((ubo.frustum[i].x * pos.x) + (ubo.frustum[i].y * pos.y) + (ubo.frustum[i].z * pos.z) + ubo.frustum[i].w + radius < 0.0)
+        if (dot(ubo.frustum[i], vec4(pos, 1)) + radius < 0.0)
         {
             return false;
         }
