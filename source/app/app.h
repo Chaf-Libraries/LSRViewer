@@ -15,8 +15,10 @@
 
 #include <vk_mem_alloc.h>
 
-//#define HIZ_ENABLE
+#define HIZ_ENABLE
 //#define VIS_HIZ
+//#define CPU_FRUSTUM
+#define MULTI_THREAD
 
 
 class Application :public VulkanExampleBase

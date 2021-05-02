@@ -228,7 +228,7 @@ void HizPipeline::prepare(VkPipelineCache& pipeline_cache)
 
 	// Create pipeline
 	VkComputePipelineCreateInfo computePipelineCreateInfo = vks::initializers::computePipelineCreateInfo(pipeline_layout, 0);
-	computePipelineCreateInfo.stage = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/hiz.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);;
+	computePipelineCreateInfo.stage = loadShader("../data/shaders/glsl/gpudrivenpipeline/hiz.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);;
 
 	VK_CHECK_RESULT(vkCreateComputePipelines(device.logicalDevice, pipeline_cache, 1, &computePipelineCreateInfo, nullptr, &pipeline));
 

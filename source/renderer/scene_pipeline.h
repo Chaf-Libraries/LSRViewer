@@ -11,7 +11,7 @@
 // Feature switch
 //#define ENABLE_DEFERRED
 #define ENABLE_DESCRIPTOR_INDEXING
-#define USE_TESSELLATION
+//#define USE_TESSELLATION
 
 class ScenePipeline :public chaf::PipelineBase
 {

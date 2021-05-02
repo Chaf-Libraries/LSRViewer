@@ -194,6 +194,8 @@ void ScenePipeline::drawNode(VkCommandBuffer commandBuffer, VkPipelineLayout pip
 				vkCmdDrawIndexedIndirect(commandBuffer, culling_pipeline.indirect_command_buffer.buffer, culling_pipeline.id_lookup[node->getID()][i] * sizeof(VkDrawIndexedIndirectCommand), 1, sizeof(VkDrawIndexedIndirectCommand));		
 			}
 		}
+		// TODO: Multi draw indirect
+
 	}
 }
 
@@ -271,6 +273,7 @@ void ScenePipeline::bindCommandBuffers(VkCommandBuffer& cmd_buffer, CullingPipel
 void ScenePipeline::bindCommandBuffers(VkCommandBuffer& cmd_buffer, chaf::Frustum& frustum)
 {
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &scene.bindless_descriptor_set, 0, nullptr);
 
 	VkDeviceSize offsets[1] = { 0 };
 
@@ -604,23 +607,23 @@ void ScenePipeline::preparePipelines(VkPipelineCache& pipeline_cache, VkRenderPa
 
 #ifdef USE_TESSELLATION
 #ifdef ENABLE_DESCRIPTOR_INDEXING
-	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing_tes.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing_tes.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	shaderStages[2] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing_tes.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
-	shaderStages[3] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing_tes.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing_tes.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing_tes.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	shaderStages[2] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing_tes.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+	shaderStages[3] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing_tes.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
 #else
-	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_tes.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_tes.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	shaderStages[2] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_tes.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
-	shaderStages[3] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_tes.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_tes.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_tes.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	shaderStages[2] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_tes.tesc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
+	shaderStages[3] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_tes.tese.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
 #endif // ENABLE_DESCRIPTOR_INDEXING
 #else
 #ifdef ENABLE_DESCRIPTOR_INDEXING
-	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene_indexing.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene_indexing.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 #else
-	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/scene.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/scene.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 #endif // ENABLE_DESCRIPTOR_INDEXING
 
 #endif // USE_TESSELLATION

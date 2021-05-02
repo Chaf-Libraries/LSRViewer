@@ -165,8 +165,8 @@ void DebugPipeline::prepare(VkPipelineCache& pipeline_cache, VkRenderPass& rende
 	pipelineCI.stageCount = static_cast<uint32_t>(shaderStages.size());
 	pipelineCI.pStages = shaderStages.data();
 
-	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/debug.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/spirv/debug.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	shaderStages[0] = loadShader("../data/shaders/glsl/gpudrivenpipeline/debug.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	shaderStages[1] = loadShader("../data/shaders/glsl/gpudrivenpipeline/debug.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipeline_cache, 1, &pipelineCI, nullptr, &pipeline));
 }

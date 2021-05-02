@@ -94,7 +94,7 @@ namespace chaf
 
 		const std::vector<std::string>& getProcesses() const;
 
-		const std::unordered_map<std::string, size_t>& getRuntimeArraySizes();
+		const std::unordered_map<std::string, size_t>& getRuntimeArraySizes() const;
 
 		void clear();
 

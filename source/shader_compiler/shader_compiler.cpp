@@ -81,7 +81,7 @@ namespace chaf
 		return processes;
 	}
 
-	const std::unordered_map<std::string, size_t>& ShaderVariant::getRuntimeArraySizes()
+	const std::unordered_map<std::string, size_t>& ShaderVariant::getRuntimeArraySizes() const
 	{
 		return runtime_array_sizes;
 	}

@@ -322,7 +322,7 @@ target_include_directories(entt INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/entt/sing
 
 # tinygltf
 add_library(tinygltf INTERFACE)
-set(TINYGLTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vulkan/external/tinygltf)
+set(TINYGLTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tinygltf)
 target_sources(tinygltf INTERFACE ${TINYGLTF_DIR}/tiny_gltf.h ${TINYGLTF_DIR}/json.hpp)
 target_include_directories(tinygltf INTERFACE ${TINYGLTF_DIR})
 
@@ -331,3 +331,98 @@ add_library(ctpl INTERFACE)
 set(CTPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ctpl)
 target_sources(ctpl INTERFACE ${CTPL_DIR}/ctpl_stl.h)
 target_include_directories(ctpl INTERFACE ${CTPL_DIR})
+
+# vma
+add_library(vma INTERFACE)
+set(VMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vma/src)
+target_sources(vma INTERFACE ${VMA_DIR}/vk_mem_alloc.h)
+target_include_directories(vma INTERFACE ${VMA_DIR})
+target_link_libraries(vma INTERFACE vulkan)
+
+# astc
+set(ASTC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/astc)
+set(ASTC_INCLUDE_DIR ${ASTC_DIR}/Source)
+set(ASTC_SOURCE_DIR ${ASTC_DIR}/Source)
+
+set(ASTC_SOURCES
+    ${ASTC_SOURCE_DIR}/astc_image_load_store.cpp
+    ${ASTC_SOURCE_DIR}/astc_pick_best_endpoint_format.cpp
+    ${ASTC_SOURCE_DIR}/astc_color_quantize.cpp
+    ${ASTC_SOURCE_DIR}/astc_weight_align.cpp
+    ${ASTC_SOURCE_DIR}/astc_integer_sequence.cpp
+    ${ASTC_SOURCE_DIR}/astc_ideal_endpoints_and_weights.cpp
+    ${ASTC_SOURCE_DIR}/astc_find_best_partitioning.cpp
+    ${ASTC_SOURCE_DIR}/astc_compress_symbolic.cpp
+    ${ASTC_SOURCE_DIR}/astc_decompress_symbolic.cpp
+    ${ASTC_SOURCE_DIR}/astc_symbolic_physical.cpp
+    ${ASTC_SOURCE_DIR}/astc_toplevel.cpp
+    ${ASTC_SOURCE_DIR}/astc_stb_tga.cpp
+    ${ASTC_SOURCE_DIR}/softfloat.cpp
+    ${ASTC_SOURCE_DIR}/mathlib.cpp
+    ${ASTC_SOURCE_DIR}/astc_quantization.cpp
+    ${ASTC_SOURCE_DIR}/astc_block_sizes2.cpp
+    ${ASTC_SOURCE_DIR}/astc_percentile_tables.cpp
+    ${ASTC_SOURCE_DIR}/astc_averages_and_directions.cpp
+    ${ASTC_SOURCE_DIR}/astc_partition_tables.cpp
+    ${ASTC_SOURCE_DIR}/astc_color_unquantize.cpp
+    ${ASTC_SOURCE_DIR}/astc_encoding_choice_error.cpp
+    ${ASTC_SOURCE_DIR}/astc_kmeans_partitioning.cpp
+    ${ASTC_SOURCE_DIR}/astc_weight_quant_xfer_tables.cpp
+    ${ASTC_SOURCE_DIR}/astc_compute_variance.cpp
+    ${ASTC_SOURCE_DIR}/astc_ktx_dds.cpp
+)
+
+add_library(astc ${ASTC_SOURCES})
+target_include_directories(astc PUBLIC ${ASTC_INCLUDE_DIR})
+#target_compile_definitions(astc PRIVATE -DNO_STB_IMAGE_IMPLEMENTATION)
+set_property(TARGET astc PROPERTY FOLDER "Extern")
+
+# glslang
+option(ENABLE_SPVREMAPPER OFF)
+option(ENABLE_GLSLANG_BINARIES OFF)
+option(ENABLE_HLSL OFF)
+option(ENABLE_OPT OFF)
+option(BUILD_TESTING OFF)
+option(BUILD_EXTERNAL OFF)
+
+add_subdirectory(glslang)
+
+if (NOT TARGET glslang-default-resource-limits)
+    add_library(glslang-default-resource-limits
+                glslang/StandAlone/ResourceLimits.cpp)
+
+    set_property(TARGET glslang-default-resource-limits PROPERTY FOLDER "Extern")
+    
+    target_include_directories(glslang-default-resource-limits
+                                PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/glslang/StandAlone)
+endif()
+
+if(NOT MSVC)
+    target_compile_options(glslang PRIVATE
+        "-Wno-logical-op-parentheses"
+        "-Wno-unused-parameter")
+
+    target_compile_options(SPIRV PRIVATE
+        "-Wno-logical-op-parentheses"
+        "-Wno-unused-parameter")
+endif()
+
+set_property(TARGET glslang PROPERTY FOLDER "Extern")
+set_property(TARGET OGLCompiler PROPERTY FOLDER "Extern")
+set_property(TARGET OSDependent PROPERTY FOLDER "Extern")
+set_property(TARGET SPIRV PROPERTY FOLDER "Extern")
+set_property(TARGET GenericCodeGen PROPERTY FOLDER "Extern")
+set_property(TARGET MachineIndependent PROPERTY FOLDER "Extern")
+
+# spirv-cross
+add_subdirectory(spirv-cross)
+
+set_property(TARGET spirv-cross PROPERTY FOLDER "Extern")
+set_property(TARGET spirv-cross-core PROPERTY FOLDER "Extern")
+set_property(TARGET spirv-cross-glsl PROPERTY FOLDER "Extern")
+set_property(TARGET spirv-cross-cpp PROPERTY FOLDER "Extern")
+set_property(TARGET spirv-cross-hlsl PROPERTY FOLDER "Extern")
+set_property(TARGET spirv-cross-msl PROPERTY FOLDER "Extern")
+set_property(TARGET spirv-cross-reflect PROPERTY FOLDER "Extern")
+set_property(TARGET spirv-cross-util PROPERTY FOLDER "Extern")
+set_property(TARGET spirv-cross-c PROPERTY FOLDER "Extern")

@@ -17,7 +17,7 @@ Application::Application(): VulkanExampleBase(ENABLE_VALIDATION)
 	camera.flipY = true;
 	camera.setPosition(glm::vec3(0.0f, 1.0f, 0.0f));
 	camera.setRotation(glm::vec3(0.0f, -90.0f, 0.0f));
-	camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 100.f);
+	camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 100000.f);
 	camera.setMovementSpeed(10.f);
 	camera.setRotationSpeed(0.1f);
 	settings.overlay = true;
@@ -106,11 +106,17 @@ void Application::buildCommandBuffers()
 		vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
 		
 		{
+#ifdef CPU_FRUSTUM
 			// CPU culling
-			//scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], frustum);
-
+			scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], frustum);
+#else
 			// GPU culling
 			scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], *culling_pipeline);
+#endif // CPU_FRUSTUM
+
+			
+
+
 		}
 
 		// TODO
@@ -189,6 +195,7 @@ void Application::prepare()
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/simple.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/bonza/Bonza4X.gltf", queue);
 	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
+	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/E/untitled2.gltf", queue);
 
 	scene->buffer_cacher = std::make_unique<chaf::BufferCacher>(*vulkanDevice, queue);
 
@@ -357,7 +364,9 @@ void Application::draw()
 
 
 	//memcpy(culling_pipeline->indirect_status.draw_count.data(), culling_pipeline->conditional_buffer.mapped,sizeof(uint32_t) * culling_pipeline->indirect_status.draw_count.size());
-
+	memcpy(&culling_pipeline->indirect_status.draw_count[0], culling_pipeline->indircet_draw_count_buffer.mapped, sizeof(uint32_t) * culling_pipeline->indirect_status.draw_count.size());
+	memcpy(&culling_pipeline->debug_depth.depth[0], culling_pipeline->debug_depth_buffer.mapped, sizeof(float) * culling_pipeline->debug_depth.depth.size());
+	memcpy(&culling_pipeline->debug_z.z[0], culling_pipeline->debug_z_buffer.mapped, sizeof(float) * culling_pipeline->debug_z.z.size());
 #ifdef _DEBUG
 	memcpy(&culling_pipeline->indirect_status.draw_count[0], culling_pipeline->indircet_draw_count_buffer.mapped, sizeof(uint32_t) * culling_pipeline->indirect_status.draw_count.size());
 	memcpy(&culling_pipeline->debug_depth.depth[0], culling_pipeline->debug_depth_buffer.mapped, sizeof(float) * culling_pipeline->debug_depth.depth.size());
@@ -387,6 +396,10 @@ void Application::render()
 	if (camera.updated) 
 	{
 		updateUniformBuffers();
+#ifdef CPU_FRUSTUM
+		buildCommandBuffers();
+#endif // CPU_FRUSTUM
+
 	}
 }
 
@@ -435,7 +448,7 @@ void Application::updateOverlay()
 	ImGui::Text("frame count: %d", count);
 	ImGui::Checkbox("begin benckmark", &begin);
 
-#if defined(_DEBUG) && defined(VIS_HIZ)
+#if !defined(_DEBUG)
 	for (uint32_t i = 0; i < culling_pipeline->primitive_count; i++)
 	{
 		ImGui::Text("depth: %.3f, maxZ: %.3f , visibility: %d", culling_pipeline->debug_depth.depth[i], culling_pipeline->debug_z.z[i], culling_pipeline->indirect_status.draw_count[i]);
