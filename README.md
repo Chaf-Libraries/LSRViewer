@@ -44,4 +44,7 @@ Large  Scene Rendering Viewer
 - [x] Bindless Texture (Descriptor indexing)
 - [x] GPU Hi-z Occlusion Culling
 - [x] Tessellation
+- [ ] Shader Compiler
+- [ ] New Scene Parser
+- [ ] Scene Spilter
 
