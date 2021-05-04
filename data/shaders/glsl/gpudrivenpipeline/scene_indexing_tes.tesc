@@ -9,7 +9,7 @@ layout (location = 2) in vec3 inColor[];
 layout (location = 3) in vec2 inUV[];
 layout (location = 4) in vec4 inTangent[];
 layout (location = 5) in mat3 inTBN[];
-
+layout (location = 8) flat in uint inIndex[];
 
 // Output
 struct PosPatch
@@ -25,6 +25,7 @@ layout (location = 10) out vec3 outColor[3];
 layout (location = 11) out vec2 outUV[3];
 layout (location = 12) out vec4 outTangent[3];
 layout (location = 13) out mat3 outTBN[3];
+layout (location = 16) out uint outIndex[3];
 
 
 // Uniform buffer
@@ -101,6 +102,7 @@ void main()
     outUV[gl_InvocationID] = inUV[gl_InvocationID];
     outTangent[gl_InvocationID] = inTangent[gl_InvocationID];
     outTBN[gl_InvocationID] = inTBN[gl_InvocationID];
+    outIndex[gl_InvocationID] = inIndex[gl_InvocationID];
 }
 
 

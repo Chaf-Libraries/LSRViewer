@@ -20,10 +20,8 @@ namespace chaf
 			vkDestroySampler(device.logicalDevice, image.texture.sampler, nullptr);
 			vkFreeMemory(device.logicalDevice, image.texture.device_memory, nullptr);
 		}
-		for (auto& material : materials)
-		{
-			vkDestroyPipeline(device.logicalDevice, material.pipeline, nullptr);
-		}
+
+		object_buffer.destroy();
 	}
 
 	Node& Scene::createNode(const std::string& name, Node& parent)

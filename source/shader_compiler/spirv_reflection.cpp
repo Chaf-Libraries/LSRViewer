@@ -1,7 +1,6 @@
 #include <shader_compiler/spirv_reflection.h>
 
-#undef max
-#undef min
+#include <limits>
 
 namespace chaf
 {

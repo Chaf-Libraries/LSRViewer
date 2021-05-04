@@ -27,6 +27,7 @@ public:
 	PFN_vkCmdSetDepthTestEnableEXT vkCmdSetDepthTestEnableEXT;
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT physicalDeviceDescriptorIndexingFeatures{};
 	VkPhysicalDeviceDepthClipEnableFeaturesEXT physicalDeviceDepthClipEnableFeatures{};
+	VkPhysicalDeviceExtendedDynamicStateFeaturesEXT physicalDeviceExtendedDynamicStateFeatures;
 	
 public:
 	Application();
@@ -35,10 +36,6 @@ public:
 
 	void buildCommandBuffers();
 
-	void prepareUniformBuffers();
-
-	void updateUniformBuffers();
-
 	void prepare();
 
 	virtual void getEnabledFeatures() override;
@@ -46,6 +43,8 @@ public:
 	void draw();
 
 	virtual void render();
+
+	void update();
 
 	virtual void OnUpdateUIOverlay(vks::UIOverlay* overlay) override;
 
@@ -56,42 +55,12 @@ public:
 	void saveScreenShot();
 
 private:
-	struct SceneUBO
-	{
-		vks::Buffer buffer;
-		struct 
-		{
-			glm::mat4 projection;
-			glm::mat4 view;
-			glm::vec4 lightPos = glm::vec4(0.0f, 2.5f, 0.0f, 1.0f);
-			glm::vec4 viewPos;
-			glm::vec4 frustum[6];
-			glm::vec4 range; // (width, height, far, near)
-		}values;
-	};
-
-	SceneUBO sceneUBO;
-	SceneUBO last_sceneUBO;
-
 	std::unique_ptr<chaf::Scene> scene{ nullptr };
 
 	std::unique_ptr<CullingPipeline> culling_pipeline;
 	std::unique_ptr<ScenePipeline> scene_pipeline;
-
-#ifdef HIZ_ENABLE
 	std::unique_ptr<HizPipeline> hiz_pipeline;
-#endif // HIZ_ENABLE
-
-#ifdef VIS_HIZ
 	std::unique_ptr<DebugPipeline> debug_pipeline;
-#endif // VIS_HIZ
-
-
-	chaf::Frustum frustum;
 
 	int32_t display_debug{ 0 };
-
-#ifdef USE_OCCLUSION_QUERY
-	std::vector<uint64_t> pass_sample;
-#endif
 };

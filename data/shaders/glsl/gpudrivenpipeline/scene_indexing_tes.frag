@@ -1,6 +1,32 @@
 #version 450
 
 #extension GL_EXT_nonuniform_qualifier : require
+#extension GL_ARB_shader_draw_parameters: enable
+
+struct ObjectData 
+{
+	int baseColorTextureIndex;
+	int normalTextureIndex;
+	int emissiveTextureIndex;
+	int occlusionTextureIndex;
+	int metallicRoughnessTextureIndex;
+	float metallicFactor;
+	float roughnessFactor;
+	int alphaMode;
+	float alphaCutOff;
+	uint doubleSided;
+
+	// Parameter
+	vec4 baseColorFactor;
+	vec3 emissiveFactor;
+
+	mat4 model;
+};
+
+layout (set = 0, binding = 1) buffer ObjectBuffer 
+{
+   ObjectData objectData[ ];
+};
 
 layout (set = 1, binding = 0) uniform sampler2D textureArray[];
 
@@ -12,31 +38,28 @@ layout (location = 4) in vec3 inViewVec;
 layout (location = 5) in vec3 inLightVec;
 layout (location = 6) in vec4 inTangent;
 layout (location = 7) in mat3 inTBN;
+layout (location = 10) flat in uint inIndex;
 
 layout (location = 0) out vec4 outFragColor;
 
-layout (constant_id = 0) const bool ALPHA_MASK = false;
-layout (constant_id = 1) const float ALPHA_MASK_CUTOFF = 0.0f;
-
-layout(push_constant) uniform TextureIndexPushConsts {
-	layout(offset = 64)
-	uint baseColorTextureIndex;
-	uint normalTextureIndex;
-} textureIndex;
 
 void main() 
 {
 	//texture(textures[nonuniformEXT(inTexIndex)], inUV);
 	// vec4 color = texture(textureArray[nonuniformEXT(textureIndex.baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
-	vec4 color = texture(textureArray[nonuniformEXT(textureIndex.baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
+vec4 color = texture(textureArray[nonuniformEXT(objectData[inIndex-1].baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
 
-	if (ALPHA_MASK) {
-		if (color.a < ALPHA_MASK_CUTOFF) {
+	if (objectData[inIndex].alphaMode == 1) {
+		if (color.a < objectData[inIndex].alphaCutOff) {
 			discard;
 		}
 	}
 
-	vec3 N = inTBN * normalize(texture(textureArray[nonuniformEXT(textureIndex.normalTextureIndex)], inUV).xyz * 2.0 - vec3(1.0));
+	vec3 N = normalize(inNormal);
+	vec3 T = normalize(inTangent.xyz);
+	vec3 B = cross(inNormal, inTangent.xyz) * inTangent.w;
+	mat3 TBN = mat3(T, B, N);
+	N = TBN * normalize(texture(textureArray[nonuniformEXT(objectData[inIndex-1].normalTextureIndex)], inUV).xyz * 2.0 - vec3(1.0));
 
 	const float ambient = 0.1;
 	vec3 L = normalize(inLightVec);

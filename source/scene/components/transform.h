@@ -8,6 +8,8 @@
 #include <scene/scene.h>
 #include <scene/node.h>
 
+#include <VulkanBuffer.h>
+
 namespace chaf
 {
 	class Transform

@@ -2,6 +2,9 @@
 
 #include <shader_compiler/shader_compiler.h>
 
+#undef max
+#undef min
+
 #include <spirv_glsl.hpp>
 
 namespace chaf

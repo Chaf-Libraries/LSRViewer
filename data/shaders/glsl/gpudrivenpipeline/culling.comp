@@ -45,12 +45,6 @@ layout (binding = 3) buffer UBOOut
 	uint drawCount[ ];
 } uboOut;
 
-// Binding 4: occlusion query result buffer
-layout (binding = 4) buffer QueryResult
-{
-	uint queryResult[ ];
-};
-
 layout (local_size_x = 32) in;
 
 // Frustum Culling for bounding sphere

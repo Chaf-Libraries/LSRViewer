@@ -35,7 +35,11 @@ Application::Application(): VulkanExampleBase(ENABLE_VALIDATION)
 
 	// dynamic state extension for turn off depth test manually
 	enabledDeviceExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
-	physicalDeviceDepthClipEnableFeatures.depthClipEnable = VK_TRUE;
+	//physicalDeviceDepthClipEnableFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT;
+	//physicalDeviceDepthClipEnableFeatures.depthClipEnable = VK_TRUE;
+
+	physicalDeviceExtendedDynamicStateFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT;
+	physicalDeviceExtendedDynamicStateFeatures.extendedDynamicState = VK_TRUE;
 
 	// descriptor indexing extension
 	enabledDeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
@@ -46,7 +50,8 @@ Application::Application(): VulkanExampleBase(ENABLE_VALIDATION)
 	physicalDeviceDescriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
 	physicalDeviceDescriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
 
-	deviceCreatepNextChain = &physicalDeviceDescriptorIndexingFeatures;
+	deviceCreatepNextChain = &physicalDeviceExtendedDynamicStateFeatures;
+	physicalDeviceExtendedDynamicStateFeatures.pNext = &physicalDeviceDescriptorIndexingFeatures;
 
 	enabledInstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
@@ -58,17 +63,8 @@ Application::~Application()
 
 	culling_pipeline.reset();
 	scene_pipeline.reset();
-
-#ifdef HIZ_ENABLE
 	hiz_pipeline.reset();
-#endif // HIZ_ENABLE
-
-#ifdef VIS_HIZ
 	debug_pipeline.reset();
-#endif
-
-	sceneUBO.buffer.destroy();
-	last_sceneUBO.buffer.destroy();
 }
 
 void Application::buildCommandBuffers()
@@ -97,88 +93,30 @@ void Application::buildCommandBuffers()
 		renderPassBeginInfo.framebuffer = frameBuffers[i];
 		VK_CHECK_RESULT(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo));
 
-#ifdef USE_OCCLUSION_QUERY
-		vkCmdResetQueryPool(drawCmdBuffers[i], culling_pipeline->query_pool, 0, culling_pipeline->primitive_count);
-#endif // USE_OCCLUSION_QUERY
-
 		vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdSetViewport(drawCmdBuffers[i], 0, 1, &viewport);
 		vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
 		
-		{
-#ifdef CPU_FRUSTUM
-			// CPU culling
-			scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], frustum);
-#else
-			// GPU culling
-			scene_pipeline->bindCommandBuffers(drawCmdBuffers[i], *culling_pipeline);
-#endif // CPU_FRUSTUM
+		scene_pipeline->CommandRecord(drawCmdBuffers[i], *culling_pipeline);
 
-			
-
-
-		}
-
-		// TODO
-#ifdef VIS_HIZ
-		if (display_debug)
+		if (display_debug > 0)
 		{
 			vkCmdSetDepthTestEnableEXT(drawCmdBuffers[i], VK_FALSE);
 			debug_pipeline->buildCommandBuffer(drawCmdBuffers[i], renderPassBeginInfo);
 			vkCmdSetDepthTestEnableEXT(drawCmdBuffers[i], VK_TRUE);
 		}
-#endif // VIS_HIZ
 
 		drawUI(drawCmdBuffers[i]);
 
 		vkCmdEndRenderPass(drawCmdBuffers[i]);
 
-
-
-#ifdef USE_OCCLUSION_QUERY
-		vkCmdCopyQueryPoolResults(drawCmdBuffers[i], culling_pipeline->query_pool, 0, culling_pipeline->primitive_count, culling_pipeline->query_result_buffer.buffer, 0, sizeof(uint32_t), VK_QUERY_RESULT_WAIT_BIT);
-#endif // USE_OCCLUSION_QUERY
-
-#ifdef HIZ_ENABLE
-		scene_pipeline->copyDepth(drawCmdBuffers[i], depthStencil.image);
-#endif
+		if (culling_pipeline->enable_hiz)
+		{
+			hiz_pipeline->copyDepth(drawCmdBuffers[i], depthStencil.image);
+		}
 
 		VK_CHECK_RESULT(vkEndCommandBuffer(drawCmdBuffers[i]));
 	}
-}
-
-void Application::prepareUniformBuffers()
-{
-	VK_CHECK_RESULT(vulkanDevice->createBuffer(
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		&sceneUBO.buffer,
-		sizeof(sceneUBO.values)));
-	VK_CHECK_RESULT(sceneUBO.buffer.map());
-
-	VK_CHECK_RESULT(vulkanDevice->createBuffer(
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		&last_sceneUBO.buffer,
-		sizeof(last_sceneUBO.values)));
-	VK_CHECK_RESULT(last_sceneUBO.buffer.map());
-
-	updateUniformBuffers();
-}
-
-void Application::updateUniformBuffers()
-{
-	memcpy(last_sceneUBO.buffer.mapped, sceneUBO.buffer.mapped, sizeof(sceneUBO.values));
-	memcpy(&last_sceneUBO.values, last_sceneUBO.buffer.mapped, sizeof(sceneUBO.values));
-
-
-	sceneUBO.values.projection = camera.matrices.perspective;
-	sceneUBO.values.view = camera.matrices.view;
-	sceneUBO.values.viewPos = camera.viewPos;
-	sceneUBO.values.range = { static_cast<float>(width), static_cast<float>(height), camera.getFarClip(), camera.getNearClip() };
-	frustum.update(camera.matrices.perspective * camera.matrices.view);
-	memcpy(sceneUBO.values.frustum, frustum.planes.data(), sizeof(glm::vec4) * 6);
-	memcpy(sceneUBO.buffer.mapped, &sceneUBO.values, sizeof(sceneUBO.values));
 }
 
 void Application::prepare()
@@ -198,49 +136,22 @@ void Application::prepare()
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/E/untitled2.gltf", queue);
 
 	scene->buffer_cacher = std::make_unique<chaf::BufferCacher>(*vulkanDevice, queue);
-
-	size_t vertexBufferSize = chaf::SceneLoader::vertex_buffer.size() * sizeof(chaf::Vertex);
-	size_t indexBufferSize = chaf::SceneLoader::index_buffer.size() * sizeof(uint32_t);
-
 	scene->buffer_cacher->addBuffer(0, chaf::SceneLoader::vertex_buffer, chaf::SceneLoader::index_buffer);
 
 	culling_pipeline = std::make_unique<CullingPipeline>(*vulkanDevice, *scene);
-
 	scene_pipeline = std::make_unique<ScenePipeline>(*vulkanDevice, *scene);
+	hiz_pipeline = std::make_unique<HizPipeline>(*vulkanDevice, width, height);
 
-#ifdef HIZ_ENABLE
-	hiz_pipeline = std::make_unique<HizPipeline>(*vulkanDevice, *scene_pipeline);
-#endif // HIZ_ENABLE
+	hiz_pipeline->prepare(queue, depthFormat);
+	scene_pipeline->prepare(renderPass, queue);
 
-
-	scene_pipeline->setupDepth(width, height, depthFormat, queue);
-
-#ifdef HIZ_ENABLE
-	hiz_pipeline->prepare(pipelineCache);
-#endif // HIZ_ENABLE
-
-	prepareUniformBuffers();
-	scene_pipeline->setupDescriptors(sceneUBO.buffer);
-
-	scene_pipeline->preparePipelines(pipelineCache, renderPass);
-
-	culling_pipeline->prepareBuffers(queue);
-
-#ifdef HIZ_ENABLE
-	culling_pipeline->prepare(pipelineCache, last_sceneUBO.buffer, *hiz_pipeline);
-#else
-	culling_pipeline->prepare(pipelineCache, sceneUBO.buffer);
-#endif
-
-#ifdef VIS_HIZ
 	debug_pipeline = std::make_unique<DebugPipeline>(*vulkanDevice);
-	debug_pipeline->setupDescriptors(*scene_pipeline);
+	debug_pipeline->setupDescriptors(*hiz_pipeline);
 	debug_pipeline->prepare(pipelineCache, renderPass);
-#endif // VIS_HIZ
 
-#ifdef USE_OCCLUSION_QUERY
-	pass_sample.resize(culling_pipeline->primitive_count);
-#endif
+	culling_pipeline->prepare(queue, *scene_pipeline, *hiz_pipeline);
+
+
 
 	buildCommandBuffers();
 	prepared = true;
@@ -257,9 +168,6 @@ void Application::getEnabledFeatures()
 	{
 		enabledFeatures.fillModeNonSolid = VK_TRUE;
 	}
-
-	//if(deviceFeatures.fa)
-	//VK_EXT_sampler_filter_minmax
 	
 	if (deviceFeatures.sparseBinding && deviceFeatures.sparseResidencyImage2D) 
 	{
@@ -287,51 +195,50 @@ void Application::draw()
 {
 	VulkanExampleBase::prepareFrame();
 
-#ifdef HIZ_ENABLE
-	vkWaitForFences(device, 1, &hiz_pipeline->fence, VK_TRUE, UINT64_MAX);
-	vkResetFences(device, 1, &hiz_pipeline->fence);
+	if (culling_pipeline->enable_hiz)
+	{
+		vkWaitForFences(device, 1, &hiz_pipeline->fence, VK_TRUE, UINT64_MAX);
+		vkResetFences(device, 1, &hiz_pipeline->fence);
+	}
+	else
+	{
+		vkWaitForFences(device, 1, &culling_pipeline->fence, VK_TRUE, UINT64_MAX);
+		vkResetFences(device, 1, &culling_pipeline->fence);
+	}
 
-	VkSubmitInfo hizSubmitInfo = vks::initializers::submitInfo();
-	hizSubmitInfo.commandBufferCount = 1;
-	hizSubmitInfo.pCommandBuffers = &hiz_pipeline->command_buffer;
-	hizSubmitInfo.signalSemaphoreCount = 1;
-	hizSubmitInfo.pSignalSemaphores = &hiz_pipeline->semaphore;
-	hizSubmitInfo.waitSemaphoreCount = 0;
-	hizSubmitInfo.pWaitSemaphores = nullptr;
+	if (culling_pipeline->enable_hiz)
+	{
+		VkSubmitInfo hizSubmitInfo = vks::initializers::submitInfo();
+		hizSubmitInfo.commandBufferCount = 1;
+		hizSubmitInfo.pCommandBuffers = &hiz_pipeline->command_buffer;
+		hizSubmitInfo.signalSemaphoreCount = 1;
+		hizSubmitInfo.pSignalSemaphores = &hiz_pipeline->semaphore;
+		hizSubmitInfo.waitSemaphoreCount = 0;
+		hizSubmitInfo.pWaitSemaphores = nullptr;
 
-	VK_CHECK_RESULT(vkQueueSubmit(hiz_pipeline->compute_queue, 1, &hizSubmitInfo, VK_NULL_HANDLE));
+		VK_CHECK_RESULT(vkQueueSubmit(hiz_pipeline->compute_queue, 1, &hizSubmitInfo, VK_NULL_HANDLE));
+	}
 
-	// Wait on present and compute semaphores
-	std::array<VkPipelineStageFlags, 1> cullStageFlags = {
-		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-	};
 
-	VkSubmitInfo cullSubmitInfo = vks::initializers::submitInfo();
-	cullSubmitInfo.commandBufferCount = 1;
-	cullSubmitInfo.pCommandBuffers = &culling_pipeline->command_buffer;
-	cullSubmitInfo.signalSemaphoreCount = 1;
-	cullSubmitInfo.pSignalSemaphores = &culling_pipeline->semaphore;
-	cullSubmitInfo.waitSemaphoreCount = 1;
-	cullSubmitInfo.pWaitSemaphores = &hiz_pipeline->semaphore;
-	cullSubmitInfo.pWaitDstStageMask = cullStageFlags.data();
-
-	VK_CHECK_RESULT(vkQueueSubmit(culling_pipeline->compute_queue, 1, &cullSubmitInfo, VK_NULL_HANDLE));
-#else
-	vkWaitForFences(device, 1, &culling_pipeline->fence, VK_TRUE, UINT64_MAX);
-	vkResetFences(device, 1, &culling_pipeline->fence);
 
 	VkSubmitInfo cullSubmitInfo = vks::initializers::submitInfo();
 	cullSubmitInfo.commandBufferCount = 1;
 	cullSubmitInfo.pCommandBuffers = &culling_pipeline->command_buffer;
 	cullSubmitInfo.signalSemaphoreCount = 1;
 	cullSubmitInfo.pSignalSemaphores = &culling_pipeline->semaphore;
-	cullSubmitInfo.waitSemaphoreCount = 0;
-	cullSubmitInfo.pWaitSemaphores = nullptr;
+
+	if (culling_pipeline->enable_hiz)
+	{
+		std::array<VkPipelineStageFlags, 1> cullStageFlags = {
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		};
+		cullSubmitInfo.waitSemaphoreCount = 1;
+		cullSubmitInfo.pWaitSemaphores = &hiz_pipeline->semaphore;
+		cullSubmitInfo.pWaitDstStageMask = cullStageFlags.data();
+	}
 
 	VK_CHECK_RESULT(vkQueueSubmit(culling_pipeline->compute_queue, 1, &cullSubmitInfo, VK_NULL_HANDLE));
-#endif // HIZ_ENABLE
 
-	//VkSubmitInfo graphicSubmitInfo{ VK_STRUCTURE_TYPE_SUBMIT_INFO };
 	submitInfo.commandBufferCount = 1;
 	submitInfo.pCommandBuffers = &drawCmdBuffers[currentBuffer];
 
@@ -349,28 +256,20 @@ void Application::draw()
 	submitInfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
 	submitInfo.pWaitDstStageMask = stageFlags.data();
 
-#ifdef HIZ_ENABLE
-	// Submit to queue
-	VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, hiz_pipeline->fence));
-#else
-	// Submit to queue
-	VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, culling_pipeline->fence));
-#endif
-
+	if (culling_pipeline->enable_hiz)
+	{
+		VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, hiz_pipeline->fence));
+	}
+	else
+	{
+		VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, culling_pipeline->fence));
+	}
 
 	VulkanExampleBase::submitFrame();
 
-	// Get draw count from compute
 
-
-	//memcpy(culling_pipeline->indirect_status.draw_count.data(), culling_pipeline->conditional_buffer.mapped,sizeof(uint32_t) * culling_pipeline->indirect_status.draw_count.size());
+	/// ////////////////////////
 	memcpy(&culling_pipeline->indirect_status.draw_count[0], culling_pipeline->indircet_draw_count_buffer.mapped, sizeof(uint32_t) * culling_pipeline->indirect_status.draw_count.size());
-	memcpy(&culling_pipeline->debug_depth.depth[0], culling_pipeline->debug_depth_buffer.mapped, sizeof(float) * culling_pipeline->debug_depth.depth.size());
-	memcpy(&culling_pipeline->debug_z.z[0], culling_pipeline->debug_z_buffer.mapped, sizeof(float) * culling_pipeline->debug_z.z.size());
-#ifdef _DEBUG
-	memcpy(&culling_pipeline->indirect_status.draw_count[0], culling_pipeline->indircet_draw_count_buffer.mapped, sizeof(uint32_t) * culling_pipeline->indirect_status.draw_count.size());
-	memcpy(&culling_pipeline->debug_depth.depth[0], culling_pipeline->debug_depth_buffer.mapped, sizeof(float) * culling_pipeline->debug_depth.depth.size());
-	memcpy(&culling_pipeline->debug_z.z[0], culling_pipeline->debug_z_buffer.mapped, sizeof(float) * culling_pipeline->debug_z.z.size());
 
 	for (auto& node : scene->getNodes())
 	{
@@ -383,10 +282,6 @@ void Application::draw()
 			}
 		}
 	}
-
-#endif // _DEBUG
-
-
 }
 
 void Application::render()
@@ -395,12 +290,22 @@ void Application::render()
 
 	if (camera.updated) 
 	{
-		updateUniformBuffers();
-#ifdef CPU_FRUSTUM
-		buildCommandBuffers();
-#endif // CPU_FRUSTUM
-
+		update();
 	}
+}
+
+void Application::update()
+{
+	memcpy(scene_pipeline->last_sceneUBO_buffer.mapped, scene_pipeline->sceneUBO.buffer.mapped, sizeof(scene_pipeline->sceneUBO.values));
+
+	scene_pipeline->sceneUBO.values.projection = camera.matrices.perspective;
+	scene_pipeline->sceneUBO.values.view = camera.matrices.view;
+	scene_pipeline->sceneUBO.values.viewPos = camera.viewPos;
+	scene_pipeline->sceneUBO.values.range = { static_cast<float>(width), static_cast<float>(height), camera.getFarClip(), camera.getNearClip() };
+	chaf::Frustum frustum;
+	frustum.update(camera.matrices.perspective * camera.matrices.view);
+	memcpy(scene_pipeline->sceneUBO.values.frustum, frustum.planes.data(), sizeof(glm::vec4) * 6);
+	memcpy(scene_pipeline->sceneUBO.buffer.mapped, &scene_pipeline->sceneUBO.values, sizeof(scene_pipeline->sceneUBO.values));
 }
 
 void Application::OnUpdateUIOverlay(vks::UIOverlay* overlay)
@@ -455,39 +360,61 @@ void Application::updateOverlay()
 	}
 #endif // _DEBUG
 
-
-#ifdef VIS_HIZ
-	std::vector<const char*> hiz_mip_level;
-	std::vector<std::string> hiz_mip_level_str;
-	for (uint32_t i = 0; i < hiz_pipeline->hiz_image.depth_pyramid_levels; i++)
-	{
-		hiz_mip_level_str.emplace_back(std::to_string(i + 1));
-	}
-	hiz_mip_level.reserve(hiz_mip_level_str.size() + 1);
-	hiz_mip_level.push_back("0");
-	for (size_t i = 0; i < hiz_mip_level_str.size(); i++)
-	{
-		hiz_mip_level.push_back(hiz_mip_level_str[i].c_str());
-	}
-
-	if (ImGui::Combo("Hiz-debug", &display_debug, &hiz_mip_level[0], hiz_mip_level.size(), hiz_mip_level.size()))
-	{
-		if (display_debug > 0)
-		{
-			debug_pipeline->updateDescriptors(*hiz_pipeline, display_debug - 1);
-			buildCommandBuffers();
-		}
-	}
-#endif // VIS_HIZ
-
 	if (ImGui::Button("screen shot"))
 	{
 		saveScreenShot();
 	}
 
-	if (ImGui::CollapsingHeader("GPU Properties"))
+	if (ImGui::CollapsingHeader("Render Setting"))
 	{
+		if (ImGui::Button(scene_pipeline->line_mode ? "fill mode" : "line mode"))
+		{
+			scene_pipeline->line_mode = !scene_pipeline->line_mode;
+			scene_pipeline->setupPipeline(renderPass);
+			UIOverlay.updated = true;
+		}
 
+		ImGui::SameLine();
+
+		if (ImGui::Button(scene_pipeline->enable_tessellation ? "tessellation disable" : "tessellation enable"))
+		{
+			scene_pipeline->enable_tessellation = !scene_pipeline->enable_tessellation;
+			scene_pipeline->setupPipeline(renderPass);
+			UIOverlay.updated = true;
+		}
+
+		if (ImGui::Button(culling_pipeline->enable_hiz ? "hiz disable" : "hiz enable"))
+		{
+			culling_pipeline->enable_hiz = !culling_pipeline->enable_hiz;
+			culling_pipeline->destroy();
+			culling_pipeline->setupPipeline(queue, *scene_pipeline, *hiz_pipeline);
+			UIOverlay.updated = true;
+		}
+
+		if(culling_pipeline->enable_hiz)
+		{
+			std::vector<const char*> hiz_mip_level;
+			std::vector<std::string> hiz_mip_level_str;
+			for (uint32_t i = 0; i < hiz_pipeline->hiz_image.depth_pyramid_levels; i++)
+			{
+				hiz_mip_level_str.emplace_back(std::to_string(i + 1));
+			}
+			hiz_mip_level.reserve(hiz_mip_level_str.size() + 1);
+			hiz_mip_level.push_back("0");
+			for (size_t i = 0; i < hiz_mip_level_str.size(); i++)
+			{
+				hiz_mip_level.push_back(hiz_mip_level_str[i].c_str());
+			}
+
+			if (ImGui::Combo("Hiz-visualize", &display_debug, &hiz_mip_level[0], hiz_mip_level.size(), hiz_mip_level.size()))
+			{
+				if (display_debug > 0)
+				{
+					debug_pipeline->updateDescriptors(*hiz_pipeline, display_debug - 1);
+					buildCommandBuffers();
+				}
+			}
+		}
 	}
 
 	// Camera Controller
@@ -636,13 +563,12 @@ void Application::updateOverlay()
 
 void Application::windowResized()
 {
-	scene_pipeline->resize(width, height, depthFormat, queue);
-
-#ifdef HIZ_ENABLE
-	hiz_pipeline->resize();
-
-#endif // HIZ_ENABLE
-
+	hiz_pipeline->resize(width, height, queue);
+	if (culling_pipeline->enable_hiz)
+	{
+		culling_pipeline->destroy();
+		culling_pipeline->setupPipeline(queue, *scene_pipeline, *hiz_pipeline);
+	}
 }
 
 void Application::saveScreenShot()

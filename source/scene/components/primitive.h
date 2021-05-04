@@ -38,6 +38,7 @@ namespace chaf
 		uint32_t first_index{ 0 };
 		uint32_t index_count{ 0 };
 		int32_t material_index{ 0 };
+		uint32_t buffer_index{ 0 };
 		size_t id{ 0 };
 		bool visible{ true };
 

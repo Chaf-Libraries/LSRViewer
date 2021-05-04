@@ -2,29 +2,22 @@
 
 #include <renderer/base_pipeline.h>
 
-class ScenePipeline;
-
 class HizPipeline :public chaf::PipelineBase
 {
 public:
-	HizPipeline(vks::VulkanDevice& device, ScenePipeline& scene_pipeline);
+	HizPipeline(vks::VulkanDevice& device, uint32_t width, uint32_t height);
 
 	~HizPipeline();
 
-	void prepareHiz();
+	void resize(uint32_t width, uint32_t height, VkQueue queue);
 
-	void resize();
-
-	void prepare(VkPipelineCache& pipeline_cache);
+	void prepare(VkQueue queue, VkFormat depth_format);
 
 	void buildCommandBuffer();
 
 	void submit();
 
-
 public:
-	ScenePipeline& scene_pipeline;
-
 	VkQueue compute_queue;
 
 	VkFence fence;
@@ -45,8 +38,6 @@ public:
 
 	VkCommandBuffer command_buffer;
 
-	// Save last depth image: copy from depth stencil attachment
-
 	struct
 	{
 		uint32_t depth_pyramid_levels{ 1 };
@@ -57,5 +48,21 @@ public:
 		VkDescriptorImageInfo descriptor;
 	}hiz_image;
 
+	void prepareHiz();
+	void destroyHiz();
 
+	struct
+	{
+		VkSampler sampler{ VK_NULL_HANDLE };
+		VkImageView view{ VK_NULL_HANDLE };
+		VkImage image{ VK_NULL_HANDLE };
+		VkDeviceMemory mem{ VK_NULL_HANDLE };
+		VkDescriptorImageInfo descriptor;
+		uint32_t width, height;
+		VkFormat format;
+	}depth_image;
+
+	void prepareDepth(VkQueue queue, VkFormat depth_format);
+	void destroyDepth();
+	void copyDepth(VkCommandBuffer cmd_buffer, VkImage depth_stencil_image);
 };

@@ -1,4 +1,5 @@
 #include <renderer/culling_pipeline.h>
+#include <renderer/scene_pipeline.h>
 
 #include <scene/node.h>
 #include <scene/components/mesh.h>
@@ -22,17 +23,26 @@ CullingPipeline::~CullingPipeline()
 	debug_z_buffer.destroy();
 #endif
 
-	vkDestroyPipelineLayout(device.logicalDevice, pipeline_layout, nullptr);
-	vkDestroyDescriptorSetLayout(device.logicalDevice, descriptor_set_layout, nullptr);
-	vkDestroyDescriptorPool(device.logicalDevice, descriptor_pool, nullptr);
-	vkDestroyPipeline(device.logicalDevice, pipeline, nullptr);
-	vkDestroyFence(device.logicalDevice, fence, nullptr);
-	vkDestroyCommandPool(device.logicalDevice, command_pool, nullptr);
-	vkDestroySemaphore(device.logicalDevice, semaphore, nullptr);
+	destroy();
 
 #ifdef USE_OCCLUSION_QUERY
 	vkDestroyQueryPool(device.logicalDevice, query_pool, nullptr);
 #endif // USE_OCCLUSION_QUERY
+}
+
+void CullingPipeline::destroy()
+{
+	if (has_init)
+	{
+		vkDestroyPipelineLayout(device.logicalDevice, pipeline_layout, nullptr);
+		vkDestroyDescriptorSetLayout(device.logicalDevice, descriptor_set_layout, nullptr);
+		vkDestroyDescriptorPool(device.logicalDevice, descriptor_pool, nullptr);
+		vkDestroyPipeline(device.logicalDevice, pipeline, nullptr);
+		vkDestroyFence(device.logicalDevice, fence, nullptr);
+		vkDestroyCommandPool(device.logicalDevice, command_pool, nullptr);
+		vkDestroySemaphore(device.logicalDevice, semaphore, nullptr);
+		has_init = false;
+	}
 }
 
 void CullingPipeline::buildCommandBuffer()
@@ -51,153 +61,7 @@ void CullingPipeline::buildCommandBuffer()
 	vkEndCommandBuffer(command_buffer);
 }
 
-void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, vks::Buffer& uniform_buffer)
-{
-	// Prepare compute queue
-	vkGetDeviceQueue(device, device.queueFamilyIndices.compute, 0, &compute_queue);
-
-	// Prepare descriptor pool
-	std::vector<VkDescriptorPoolSize> poolSizes = {
-	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
-	vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 4),
-	};
-
-	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, 1);
-	VK_CHECK_RESULT(vkCreateDescriptorPool(device.logicalDevice, &descriptorPoolInfo, nullptr, &descriptor_pool));
-
-	// Descriptor set layout binding
-	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
-		// Binding 0: Instance input data buffer
-		vks::initializers::descriptorSetLayoutBinding(
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			0),
-		// Binding 1: Indirect draw command output buffer (input)
-		vks::initializers::descriptorSetLayoutBinding(
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			1),
-		// Binding 2: Uniform buffer with global matrices (input)
-		vks::initializers::descriptorSetLayoutBinding(
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			2),
-		// Binding 3: Indirect draw stats (output)
-		vks::initializers::descriptorSetLayoutBinding(
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			3),
-		// Binding 4: query result data buffer
-		vks::initializers::descriptorSetLayoutBinding(
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			4),
-	};
-
-	// Descriptor set layout
-	VkDescriptorSetLayoutCreateInfo descriptorLayout =
-		vks::initializers::descriptorSetLayoutCreateInfo(
-			setLayoutBindings.data(),
-			static_cast<uint32_t>(setLayoutBindings.size()));
-
-	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device.logicalDevice, &descriptorLayout, nullptr, &descriptor_set_layout));
-
-	// Pipeline layout
-	VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo =
-		vks::initializers::pipelineLayoutCreateInfo(
-			&descriptor_set_layout,
-			1);
-
-	VK_CHECK_RESULT(vkCreatePipelineLayout(device.logicalDevice, &pPipelineLayoutCreateInfo, nullptr, &pipeline_layout));
-
-	// Descriptor sets
-	VkDescriptorSetAllocateInfo allocInfo =
-		vks::initializers::descriptorSetAllocateInfo(
-			descriptor_pool,
-			&descriptor_set_layout,
-			1);
-
-	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptor_set));
-
-	// update descriptor sets
-	std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets =
-	{
-		// Binding 0: Instance input data buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			0,
-			&instance_buffer.descriptor),
-		// Binding 1: Indirect draw command output buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			1,
-			&indirect_command_buffer.descriptor),
-		// Binding 2: Uniform buffer with global matrices
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			2,
-			&uniform_buffer.descriptor),
-		// Binding 3: Indirect draw stats (written in shader)
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			3,
-			&indircet_draw_count_buffer.descriptor),
-
-		// Binding 4: occlusion query result buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			4,
-			&query_result_buffer.descriptor),
-	};
-
-	vkUpdateDescriptorSets(device, static_cast<uint32_t>(computeWriteDescriptorSets.size()), computeWriteDescriptorSets.data(), 0, NULL);
-
-	// Create pipeline
-	VkComputePipelineCreateInfo computePipelineCreateInfo = vks::initializers::computePipelineCreateInfo(pipeline_layout, 0);
-	computePipelineCreateInfo.stage = loadShader("../data/shaders/glsl/gpudrivenpipeline/culling.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);;
-
-	VK_CHECK_RESULT(vkCreateComputePipelines(device.logicalDevice, pipeline_cache, 1, &computePipelineCreateInfo, nullptr, &pipeline));
-
-	VkCommandPoolCreateInfo cmdPoolInfo = {};
-	cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	cmdPoolInfo.queueFamilyIndex = device.queueFamilyIndices.compute;
-	cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	VK_CHECK_RESULT(vkCreateCommandPool(device.logicalDevice, &cmdPoolInfo, nullptr, &command_pool));
-
-	// Create a command buffer for compute operations
-	VkCommandBufferAllocateInfo cmdBufAllocateInfo =
-		vks::initializers::commandBufferAllocateInfo(
-			command_pool,
-			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			1);
-
-	VK_CHECK_RESULT(vkAllocateCommandBuffers(device.logicalDevice, &cmdBufAllocateInfo, &command_buffer));
-
-	// Fence for compute CB sync
-	VkFenceCreateInfo fenceCreateInfo = vks::initializers::fenceCreateInfo(VK_FENCE_CREATE_SIGNALED_BIT);
-	VK_CHECK_RESULT(vkCreateFence(device.logicalDevice, &fenceCreateInfo, nullptr, &fence));
-
-	VkSemaphoreCreateInfo semaphoreCreateInfo = vks::initializers::semaphoreCreateInfo();
-	VK_CHECK_RESULT(vkCreateSemaphore(device.logicalDevice, &semaphoreCreateInfo, nullptr, &semaphore));
-
-	// Setup query pool
-#ifdef USE_OCCLUSION_QUERY
-	VkQueryPoolCreateInfo queryPoolInfo = {};
-	queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-	queryPoolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
-	queryPoolInfo.queryCount = primitive_count;
-	VK_CHECK_RESULT(vkCreateQueryPool(device.logicalDevice, &queryPoolInfo, NULL, &query_pool));
-#endif // USE_OCCLUSION_QUERY
-
-	buildCommandBuffer();
-}
-
-void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, vks::Buffer& uniform_buffer, HizPipeline& hiz_pipeline)
+void CullingPipeline::setupPipeline(VkQueue& queue, ScenePipeline& scene_pipeline, HizPipeline& hiz_pipeline)
 {
 	// Prepare compute queue
 	vkGetDeviceQueue(device, device.queueFamilyIndices.compute, 0, &compute_queue);
@@ -208,7 +72,6 @@ void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, vks::Buffer& unif
 		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 7),
 		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
 	};
-
 	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, 1);
 	VK_CHECK_RESULT(vkCreateDescriptorPool(device.logicalDevice, &descriptorPoolInfo, nullptr, &descriptor_pool));
 
@@ -233,31 +96,19 @@ void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, vks::Buffer& unif
 		vks::initializers::descriptorSetLayoutBinding(
 			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			VK_SHADER_STAGE_COMPUTE_BIT,
-			3),
-		// Binding 4: query result data buffer
-		vks::initializers::descriptorSetLayoutBinding(
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			4),
-		// Binding 5: Hierarchy Z buffer
-		vks::initializers::descriptorSetLayoutBinding(
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			5),
-
-#ifdef DEBUG_HIZ
-		// Binding 6: query result data buffer
-		vks::initializers::descriptorSetLayoutBinding(
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			6),
-		// Binding 7: Hierarchy Z buffer
-		vks::initializers::descriptorSetLayoutBinding(
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			VK_SHADER_STAGE_COMPUTE_BIT,
-			7),
-#endif
+			3)
 	};
+
+	if (enable_hiz)
+	{
+		// (Binding 4: Hiz image)
+		setLayoutBindings.push_back(
+			vks::initializers::descriptorSetLayoutBinding(
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_COMPUTE_BIT,
+				4)
+		);
+	}
 
 	// Descriptor set layout
 	VkDescriptorSetLayoutCreateInfo descriptorLayout =
@@ -304,50 +155,40 @@ void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, vks::Buffer& unif
 			descriptor_set,
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			2,
-			&uniform_buffer.descriptor),
+			&scene_pipeline.last_sceneUBO_buffer.descriptor),
 		// Binding 3: Indirect draw stats (written in shader)
 		vks::initializers::writeDescriptorSet(
 			descriptor_set,
 			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 			3,
 			&indircet_draw_count_buffer.descriptor),
-
-		// Binding 4: occlusion query result buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			4,
-			&query_result_buffer.descriptor),
-
-		// Binding 5: hiz image
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			5,
-			&hiz_pipeline.hiz_image.descriptor),
-
-#ifdef DEBUG_HIZ
-		// Binding 6: debug depth buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			6,
-			&debug_depth_buffer.descriptor),
-
-		// Binding 7: occlusion query result buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			7,
-			&debug_z_buffer.descriptor),
-#endif
 	};
 
-	vkUpdateDescriptorSets(device, static_cast<uint32_t>(computeWriteDescriptorSets.size()), computeWriteDescriptorSets.data(), 0, NULL);
+	if (enable_hiz)
+	{
+		computeWriteDescriptorSets.push_back(
+			// Binding 4: hiz image
+			vks::initializers::writeDescriptorSet(
+				descriptor_set,
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				4,
+				&hiz_pipeline.hiz_image.descriptor)
+		);
+	}
+
+	vkUpdateDescriptorSets(device, static_cast<uint32_t>(computeWriteDescriptorSets.size()), computeWriteDescriptorSets.data(), 0, nullptr);
 
 	// Create pipeline
 	VkComputePipelineCreateInfo computePipelineCreateInfo = vks::initializers::computePipelineCreateInfo(pipeline_layout, 0);
-	computePipelineCreateInfo.stage = loadShader("../data/shaders/glsl/gpudrivenpipeline/culling_hiz.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);;
+
+	if (enable_hiz)
+	{
+		computePipelineCreateInfo.stage = loadShader("../data/shaders/glsl/gpudrivenpipeline/culling_hiz.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+	}
+	else
+	{
+		computePipelineCreateInfo.stage = loadShader("../data/shaders/glsl/gpudrivenpipeline/culling.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
+	}
 
 	VK_CHECK_RESULT(vkCreateComputePipelines(device.logicalDevice, pipeline_cache, 1, &computePipelineCreateInfo, nullptr, &pipeline));
 
@@ -373,16 +214,28 @@ void CullingPipeline::prepare(VkPipelineCache& pipeline_cache, vks::Buffer& unif
 	VkSemaphoreCreateInfo semaphoreCreateInfo = vks::initializers::semaphoreCreateInfo();
 	VK_CHECK_RESULT(vkCreateSemaphore(device.logicalDevice, &semaphoreCreateInfo, nullptr, &semaphore));
 
-	// Setup query pool
-#ifdef USE_OCCLUSION_QUERY
-	VkQueryPoolCreateInfo queryPoolInfo = {};
-	queryPoolInfo.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
-	queryPoolInfo.queryType = VK_QUERY_TYPE_OCCLUSION;
-	queryPoolInfo.queryCount = primitive_count;
-	VK_CHECK_RESULT(vkCreateQueryPool(device.logicalDevice, &queryPoolInfo, NULL, &query_pool));
-#endif // USE_OCCLUSION_QUERY
+	// Build command buffer
+	VkCommandBufferBeginInfo cmdBufInfo = vks::initializers::commandBufferBeginInfo();
 
-	buildCommandBuffer();
+	VK_CHECK_RESULT(vkBeginCommandBuffer(command_buffer, &cmdBufInfo));
+
+	{
+		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_set, 0, 0);
+
+		vkCmdDispatch(command_buffer, getGroupCount(primitive_count, 32), 1, 1);
+	}
+
+	vkEndCommandBuffer(command_buffer);
+
+	has_init = true;
+}
+
+void CullingPipeline::prepare(VkQueue& queue, ScenePipeline& scene_pipeline, HizPipeline& hiz_pipeline)
+{
+	destroy();
+	prepareBuffers(queue);
+	setupPipeline(queue, scene_pipeline, hiz_pipeline);
 }
 
 void CullingPipeline::submit()
@@ -421,7 +274,6 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 
 	indirect_commands.resize(primitive_count);
 
-	uint32_t idx = 0;
 	for (auto& node : scene.getNodes())
 	{
 		if (node->hasComponent<chaf::Mesh>())
@@ -435,6 +287,8 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 				chaf::AABB world_bounds = { mesh_bounds.getMin(), mesh_bounds.getMax() };
 				world_bounds.transform(transform.getWorldMatrix());
 
+				uint32_t idx = static_cast<uint32_t>(mesh.getPrimitives()[i].material_index);
+
 				instance_data[idx].max = world_bounds.getMax();
 				instance_data[idx].min = world_bounds.getMin();
 
@@ -442,21 +296,23 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 				indirect_commands[idx].instanceCount = 1;
 				indirect_commands[idx].firstIndex = mesh.getPrimitives()[i].first_index;
 				indirect_commands[idx].vertexOffset = 0;
-				indirect_commands[idx].firstInstance = 0;
+				indirect_commands[idx].firstInstance = idx;
 
 				if (id_lookup.find(node->getID()) == id_lookup.end())
 				{
 					id_lookup[node->getID()] = {};
 				}
 				id_lookup[node->getID()].insert({ i, idx });
-				idx++;
 			}
 		}
 	}
 
 	indirect_status.draw_count.resize(indirect_commands.size());
+
+#ifdef DEBUG_HIZ
 	debug_depth.depth.resize(indirect_commands.size());
 	debug_z.z.resize(indirect_commands.size());
+#endif // DEBUG_HIZ
 
 	// Transfer indirect command buffer
 	VK_CHECK_RESULT(device.createBuffer(
@@ -538,70 +394,4 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 	VK_CHECK_RESULT(debug_z_buffer.map());
 #endif // DEBUG_HIZ
 
-}
-
-void CullingPipeline::updateDescriptorSet(vks::Buffer& uniform_buffer, HizPipeline& hiz_pipeline)
-{
-	// update descriptor sets
-	std::vector<VkWriteDescriptorSet> computeWriteDescriptorSets =
-	{
-		// Binding 0: Instance input data buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			0,
-			&instance_buffer.descriptor),
-		// Binding 1: Indirect draw command output buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			1,
-			&indirect_command_buffer.descriptor),
-		// Binding 2: Uniform buffer with global matrices
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			2,
-			&uniform_buffer.descriptor),
-		// Binding 3: Indirect draw stats (written in shader)
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			3,
-			&indircet_draw_count_buffer.descriptor),
-
-		// Binding 4: occlusion query result buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			4,
-			&query_result_buffer.descriptor),
-
-		// Binding 5: hiz image
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			5,
-			&hiz_pipeline.hiz_image.descriptor),
-
-#ifdef DEBUG_HIZ
-		// Binding 6: debug depth buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			6,
-			&debug_depth_buffer.descriptor),
-
-		// Binding 7: occlusion query result buffer
-		vks::initializers::writeDescriptorSet(
-			descriptor_set,
-			VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			7,
-			&debug_z_buffer.descriptor),
-#endif
-	};
-
-	vkUpdateDescriptorSets(device, static_cast<uint32_t>(computeWriteDescriptorSets.size()), computeWriteDescriptorSets.data(), 0, NULL);
-
-	buildCommandBuffer();
 }

@@ -18,7 +18,7 @@ namespace chaf
 			const std::vector<uint8_t>& glsl_source,
 			const std::string& entry_point,
 			const ShaderVariant& variant,
-			std::vector<uint32_t> spirv,
+			std::vector<uint32_t>& spirv,
 			std::string& info_log);
 
 	private:

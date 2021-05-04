@@ -9,6 +9,7 @@
 #include <scene/cacher/buffer_cacher.h>
 
 #include <VulkanTexture.h>
+#include <VulkanBuffer.h>
 
 namespace chaf
 {
@@ -87,11 +88,9 @@ namespace chaf
 		std::vector<Image> images;
 		std::vector<Texture> textures;
 		std::vector<Material> materials;
+		vks::Buffer object_buffer;
 
 		std::unique_ptr<BufferCacher> buffer_cacher;
-
-		// descriptor for texture
-		VkDescriptorSet bindless_descriptor_set;
 	};
 	
 

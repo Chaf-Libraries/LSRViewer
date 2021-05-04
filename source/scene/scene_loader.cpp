@@ -3,6 +3,7 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_EXTERNAL_IMAGE
+//#define TINYGLTF_NO_EXTERNAL_BUFFER
 
 #include <scene/scene_loader.h>
 #include <scene/components/transform.h>
@@ -19,7 +20,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/quaternion.hpp>
 
-#include <vulkan/vulkan.h>
+#include <VulkanBuffer.h>
 
 #define KHR_LIGHTS_PUNCTUAL_EXTENSION "KHR_lights_punctual"
 
@@ -29,7 +30,7 @@ namespace chaf
 	std::vector<Vertex> SceneLoader::vertex_buffer;
 	std::string SceneLoader::path = "";
 
-	std::unique_ptr<Scene> SceneLoader::LoadFromFile(vks::VulkanDevice& device, const std::string& path, VkQueue copy_queue)
+	std::unique_ptr<Scene> SceneLoader::LoadFromFile(vks::VulkanDevice& device, const std::string& path, VkQueue& copy_queue)
 	{
 		size_t pos = path.find_last_of('/');
 		SceneLoader::path = path.substr(0, pos);
@@ -64,6 +65,8 @@ namespace chaf
 		parseImages(device, gltf_input, *scene, copy_queue);
 		parseTextures(gltf_input, *scene);
 		parseMaterials(gltf_input, *scene);
+
+		genPrimitiveBuffer(device, *scene, copy_queue);
 
 		return scene;
 	}
@@ -314,25 +317,22 @@ namespace chaf
 		{
 			// We only read the most basic properties required for our sample
 			tinygltf::Material glTFMaterial = model.materials[i];
-			// Get the base color factor
-			if (glTFMaterial.values.find("baseColorFactor") != glTFMaterial.values.end()) 
-			{
-				scene.materials[i].baseColorFactor = glm::make_vec4(glTFMaterial.values["baseColorFactor"].ColorFactor().data());
-			}
-			// Get base color texture index
-			if (glTFMaterial.values.find("baseColorTexture") != glTFMaterial.values.end()) 
-			{
-				scene.materials[i].baseColorTextureIndex = glTFMaterial.values["baseColorTexture"].TextureIndex();
-			}
-			// Get the normal map texture index
-			if (glTFMaterial.additionalValues.find("normalTexture") != glTFMaterial.additionalValues.end()) 
-			{
-				scene.materials[i].normalTextureIndex = glTFMaterial.additionalValues["normalTexture"].TextureIndex();
-			}
+
 			// Get some additional material parameters that are used in this sample
-			scene.materials[i].alphaMode = glTFMaterial.alphaMode;
-			scene.materials[i].alphaCutOff = (float)glTFMaterial.alphaCutoff;
-			scene.materials[i].doubleSided = glTFMaterial.doubleSided;
+			scene.materials[i].value.baseColorTextureIndex = (int32_t)glTFMaterial.pbrMetallicRoughness.baseColorTexture.index;
+			scene.materials[i].value.normalTextureIndex = (int32_t)glTFMaterial.normalTexture.index;
+			scene.materials[i].value.emissiveTextureIndex = (int32_t)glTFMaterial.emissiveTexture.index;
+			scene.materials[i].value.occlusionTextureIndex = (int32_t)glTFMaterial.occlusionTexture.index;
+			scene.materials[i].value.metallicRoughnessTextureIndex = (int32_t)glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
+
+			scene.materials[i].value.baseColorFactor = { glTFMaterial.pbrMetallicRoughness.baseColorFactor[0], glTFMaterial.pbrMetallicRoughness.baseColorFactor[1], glTFMaterial.pbrMetallicRoughness.baseColorFactor[2], glTFMaterial.pbrMetallicRoughness.baseColorFactor[3] };
+			scene.materials[i].value.emissiveFactor = { glTFMaterial.emissiveFactor[0], glTFMaterial.emissiveFactor[1], glTFMaterial.emissiveFactor[2] };
+			scene.materials[i].value.metallicFactor = (float)glTFMaterial.pbrMetallicRoughness.metallicFactor;
+			scene.materials[i].value.roughnessFactor = (float)glTFMaterial.pbrMetallicRoughness.roughnessFactor;
+		
+			scene.materials[i].value.alphaMode = glTFMaterial.alphaMode == "MASK" ? 1 : 0;
+			scene.materials[i].value.alphaCutOff = (float)glTFMaterial.alphaCutoff;
+			scene.materials[i].value.doubleSided = (uint32_t)glTFMaterial.doubleSided;
 		}
 	}
 
@@ -426,5 +426,53 @@ namespace chaf
 		}
 
 		light.setProperties(properties);
+	}
+
+	void SceneLoader::genPrimitiveBuffer(vks::VulkanDevice& device, Scene& scene, VkQueue& queue)
+	{
+		vks::Buffer stagingBuffer;
+
+		struct Data
+		{
+			Material material;
+			alignas(16) glm::mat4 model;
+		};
+
+		std::vector<Data> buffer_data;
+		buffer_data.resize(scene.materials.size());
+
+		for (auto& node : scene.getNodes())
+		{
+			if (node->hasComponent<Mesh>())
+			{
+				auto& transform = node->getComponent<Transform>();
+				for (auto& primirive : node->getComponent<Mesh>().getPrimitives())
+				{
+					auto& material = scene.materials[primirive.material_index];
+
+					Data data;
+					data.material = material;
+					data.model = transform.getWorldMatrix();
+
+					buffer_data[primirive.material_index] = data;
+				}
+			}
+		}
+
+		VK_CHECK_RESULT(device.createBuffer(
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			&stagingBuffer,
+			sizeof(Data)* buffer_data.size(),
+			buffer_data.data()));
+
+		VK_CHECK_RESULT(device.createBuffer(
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			&scene.object_buffer,
+			stagingBuffer.size));
+
+		device.copyBuffer(&stagingBuffer, &scene.object_buffer, queue);
+		stagingBuffer.destroy();
 	}
 }

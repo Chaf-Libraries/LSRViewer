@@ -17,7 +17,7 @@ public:
 
 	void setupDescriptors(HizPipeline& hiz_pipeline);
 
-	void setupDescriptors(ScenePipeline& scene_pipeline);
+	//void setupDescriptors(ScenePipeline& scene_pipeline);
 
 	void prepare(VkPipelineCache& pipeline_cache, VkRenderPass& render_pass);
 

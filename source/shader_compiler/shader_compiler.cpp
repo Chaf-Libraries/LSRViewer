@@ -1,20 +1,12 @@
 #include <shader_compiler/shader_compiler.h>
 #include <shader_compiler/glsl_compiler.h>
+#include <shader_compiler/spirv_reflection.h>
 
 namespace chaf
 {
-	inline std::vector<uint8_t> convertToBytes(std::vector<std::string>& lines)
-	{
-		std::vector<uint8_t> bytes;
-
-		for (auto& line : lines)
-		{
-			line += "\n";
-			std::vector<uint8_t> line_bytes(line.begin(), line.end());
-			bytes.insert(bytes.end(), line_bytes.begin(), line_bytes.end());
-		}
-
-		return bytes;
+	inline std::vector<uint8_t> convertToBytes(const std::string& line)
+	{		
+		return std::vector<uint8_t>(line.begin(),line.end());
 	}
 
 	ShaderVariant::ShaderVariant(std::string&& preamble, std::vector<std::string>&& processes) :
@@ -118,7 +110,7 @@ namespace chaf
 			throw std::runtime_error("Shader has no specify entry point!");
 		}
 
-		std::vector<std::string> raw_data;
+		std::string raw_data;
 
 		std::ifstream file;
 
@@ -129,6 +121,9 @@ namespace chaf
 			throw std::runtime_error("Failed to open shader: " + filename);
 		}
 
+		raw_data = std::string{ (std::istreambuf_iterator<char>(file)),
+					   (std::istreambuf_iterator<char>()) };
+
 		auto shader_data = convertToBytes(raw_data);
 
 		GLSLCompiler compiler;
@@ -138,7 +133,15 @@ namespace chaf
 			return false;
 		}
 
-		// TODO: spirv reflection
+		SpirvReflection spirv_reflection;
+
+		// Reflect all shader resouces
+		if (!spirv_reflection.reflectShaderResources(stage, spirv, resources, shader_variant))
+		{
+			return false;
+		}
+
+		return true;
 	}
 
 	void ShaderCompiler::setFile(const std::string& filename)

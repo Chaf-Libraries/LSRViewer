@@ -14,6 +14,7 @@ layout (location = 10) in vec3 inColor[];
 layout (location = 11) in vec2 inUV[];
 layout (location = 12) in vec4 inTangent[];
 layout (location = 13) in mat3 inTBN[];
+layout (location = 16) flat in uint inIndex[];
 
 layout (location = 0) out vec3 outPos;
 layout (location = 1) out vec3 outNormal;
@@ -23,6 +24,7 @@ layout (location = 4) out vec3 outViewVec;
 layout (location = 5) out vec3 outLightVec;
 layout (location = 6) out vec4 outTangent;
 layout (location = 7) out mat3 outTBN;
+layout (location = 10) out uint outIndex;
 
 // Uniform buffer
 layout (set = 0, binding = 0) uniform UBOScene 
@@ -35,10 +37,30 @@ layout (set = 0, binding = 0) uniform UBOScene
 	vec4 range;
 } uboScene;
 
-// Push constant
-layout(push_constant) uniform PushConsts {
+struct ObjectData 
+{
+	int baseColorTextureIndex;
+	int normalTextureIndex;
+	int emissiveTextureIndex;
+	int occlusionTextureIndex;
+	int metallicRoughnessTextureIndex;
+	float metallicFactor;
+	float roughnessFactor;
+	int alphaMode;
+	float alphaCutOff;
+	uint doubleSided;
+
+	// Parameter
+	vec4 baseColorFactor;
+	vec3 emissiveFactor;
+
 	mat4 model;
-} primitive;
+};
+
+layout (set = 0, binding = 1) buffer ObjectBuffer 
+{
+   ObjectData objectData[ ];
+};
 
 vec3 interpolation(vec3 v1, vec3 v2, vec3 v3)
 {
@@ -72,7 +94,7 @@ void main()
     outUV = interpolation(inUV[0], inUV[1], inUV[2]);
     outTangent = interpolation(inTangent[0], inTangent[1], inTangent[2]);
     outTBN = interpolation(inTBN[0], inTBN[1], inTBN[2]);
-
+    outIndex = inIndex[2];
   
     vec3 N = normalize(outNormal);
 	vec3 T = normalize(outTangent.xyz);
@@ -88,11 +110,11 @@ void main()
 
     //outPos = P1;  
     gl_Position = vec4(outPos, 1.0);
-	gl_Position = uboScene.projection * uboScene.view * primitive.model* gl_Position;
+	gl_Position = uboScene.projection * uboScene.view * objectData[outIndex].model* gl_Position;
     gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 	
     //outNormal = mat3(primitive.model) * outNormal;
-	vec4 pos = primitive.model * vec4(outPos, 1.0);
+	vec4 pos = objectData[outIndex].model * vec4(outPos, 1.0);
 	outLightVec = uboScene.lightPos.xyz - pos.xyz;
 	outViewVec = uboScene.viewPos.xyz - pos.xyz;
 }  

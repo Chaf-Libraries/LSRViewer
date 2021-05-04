@@ -8,7 +8,9 @@
 #include <glm/glm.hpp>
 
 // TODO: Compute shader Occlusion Culling
-#define DEBUG_HIZ
+//#define DEBUG_HIZ
+
+class ScenePipeline;
 
 class CullingPipeline: public chaf::PipelineBase
 {
@@ -24,17 +26,17 @@ public:
 
 	~CullingPipeline();
 
+	void destroy();
+
 	void buildCommandBuffer();
 
-	void prepare(VkPipelineCache& pipeline_cache, vks::Buffer& uniform_buffer);
+	void setupPipeline(VkQueue& queue, ScenePipeline& scene_pipeline, HizPipeline& hiz_pipeline);
 
-	void prepare(VkPipelineCache& pipeline_cache, vks::Buffer& uniform_buffer, HizPipeline& hiz_pipeline);
+	void prepare(VkQueue& queue, ScenePipeline& scene_pipeline, HizPipeline& hiz_pipeline);
 
 	void submit();
 
 	void prepareBuffers(VkQueue& queue);
-
-	void updateDescriptorSet(vks::Buffer& uniform_buffer, HizPipeline& hiz_pipeline);
 
 public:
 	chaf::Scene& scene;
@@ -71,9 +73,9 @@ public:
 
 	uint32_t primitive_count{ 0 };
 
-#ifdef USE_OCCLUSION_QUERY
-	VkQueryPool query_pool;
-#endif // USE_OCCLUSION_QUERY
+	bool has_init{ false };
+
+	bool enable_hiz{ false };
 
 	struct
 	{
@@ -99,5 +101,4 @@ public:
 
 	// Node_ID - <primitive_id, index>
 	std::unordered_map<uint32_t, std::unordered_map<uint32_t, uint32_t>> id_lookup;
-	// TODO: LOD
 };

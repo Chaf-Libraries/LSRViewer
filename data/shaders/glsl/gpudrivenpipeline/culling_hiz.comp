@@ -45,28 +45,22 @@ layout (binding = 3) buffer UBOOut
 	uint drawCount[ ];
 } uboOut;
 
-// Binding 4: occlusion query result buffer
-layout (binding = 4) buffer QueryResult
-{
-	uint queryResult[ ];
-};
-
-// Binding 5: hierarchy z image
-layout (binding = 5) uniform sampler2D hiz_image;
+// Binding 4: hierarchy z image
+layout (binding = 4) uniform sampler2D hiz_image;
 
 layout (local_size_x = 32) in;
 
-// Binding 6: debug: read depth
-layout (binding = 6) buffer DebugDepth
-{
-	float depth[ ];
-} debugDepth;
+// // Binding 6: debug: read depth
+// layout (binding = 6) buffer DebugDepth
+// {
+// 	float depth[ ];
+// } debugDepth;
 
-// Binding 7: debug: calculate depth
-layout (binding = 7) buffer DebugZ
-{
-	float Z[ ];
-} debugZ;
+// // Binding 7: debug: calculate depth
+// layout (binding = 7) buffer DebugZ
+// {
+// 	float Z[ ];
+// } debugZ;
 
 // Frustum Culling for bounding sphere
 bool checkSphere(vec3 pos, float radius)
@@ -231,8 +225,8 @@ bool HizCheck(vec3 min_val, vec3 max_val, uint idx)
     
     float depthSphere = (max_z+min_z)/2;
 
-    debugDepth.depth[idx] = depth;
-    debugZ.Z[idx] = depthSphere;
+    // debugDepth.depth[idx] = depth;
+    // debugZ.Z[idx] = depthSphere;
 
     if(min_z < depth)
     {

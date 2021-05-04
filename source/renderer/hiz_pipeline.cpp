@@ -1,10 +1,11 @@
 #include <renderer/hiz_pipeline.h>
-#include <renderer/scene_pipeline.h>
 
-
-HizPipeline::HizPipeline(vks::VulkanDevice& device, ScenePipeline& scene_pipeline) :
-	PipelineBase{ device }, scene_pipeline{ scene_pipeline }
+HizPipeline::HizPipeline(vks::VulkanDevice& device, uint32_t width, uint32_t height) :
+	PipelineBase{ device }
 {
+	depth_image.width = width;
+	depth_image.height = height;
+
 	VkCommandPoolCreateInfo cmdPoolInfo = {};
 	cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	cmdPoolInfo.queueFamilyIndex = device.queueFamilyIndices.compute;
@@ -19,14 +20,8 @@ HizPipeline::~HizPipeline()
 	// Destroy depth image
 	vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
 
-	for (auto& view : hiz_image.views)
-	{
-		vkDestroyImageView(device, view, nullptr);
-	}
-
-	vkDestroyImage(device, hiz_image.image, nullptr);
-	vkFreeMemory(device, hiz_image.mem, nullptr);
-	vkDestroySampler(device, hiz_image.sampler, nullptr);
+	destroyDepth();
+	destroyHiz();
 
 	vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
 	vkDestroyDescriptorSetLayout(device, descriptor_set_layout, nullptr);
@@ -39,13 +34,13 @@ HizPipeline::~HizPipeline()
 
 void HizPipeline::prepareHiz()
 {
-	hiz_image.depth_pyramid_levels = static_cast<uint32_t>(floor(log2(std::max(scene_pipeline.depth_image.width, scene_pipeline.depth_image.height))));
+	hiz_image.depth_pyramid_levels = static_cast<uint32_t>(floor(log2(std::max(depth_image.width, depth_image.height))));
 
 	// Setup Hi-z image
 	VkImageCreateInfo image = vks::initializers::imageCreateInfo();
 	image.imageType = VK_IMAGE_TYPE_2D;
-	image.extent.width = scene_pipeline.depth_image.width;
-	image.extent.height = scene_pipeline.depth_image.height;
+	image.extent.width = depth_image.width;
+	image.extent.height = depth_image.height;
 	image.extent.depth = 1;
 	image.mipLevels = hiz_image.depth_pyramid_levels;
 	image.arrayLayers = 1;
@@ -122,7 +117,7 @@ void HizPipeline::prepareHiz()
 	VK_CHECK_RESULT(vkCreateSampler(device, &sampler, 0, &hiz_image.sampler));
 }
 
-void HizPipeline::resize()
+void HizPipeline::destroyHiz()
 {
 	for (auto& view : hiz_image.views)
 	{
@@ -132,7 +127,174 @@ void HizPipeline::resize()
 	vkDestroyImage(device, hiz_image.image, nullptr);
 	vkFreeMemory(device, hiz_image.mem, nullptr);
 	vkDestroySampler(device, hiz_image.sampler, nullptr);
+}
 
+void HizPipeline::prepareDepth(VkQueue queue, VkFormat depth_format)
+{
+	// Setup depth image
+	depth_image.format = depth_format;
+
+	VkImageCreateInfo image = vks::initializers::imageCreateInfo();
+	image.imageType = VK_IMAGE_TYPE_2D;
+	image.extent.width = depth_image.width;
+	image.extent.height = depth_image.height;
+	image.extent.depth = 1;
+	image.mipLevels = 1;
+	image.arrayLayers = 1;
+	image.samples = VK_SAMPLE_COUNT_1_BIT;
+	image.tiling = VK_IMAGE_TILING_OPTIMAL;
+	image.format = depth_format;																// Depth stencil attachment
+	image.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;		// We will sample directly from the depth attachment for the shadow mapping
+	VK_CHECK_RESULT(vkCreateImage(device, &image, nullptr, &depth_image.image));
+
+	VkMemoryAllocateInfo memAllocInfo = vks::initializers::memoryAllocateInfo();
+	VkMemoryRequirements memReqs;
+
+	VkCommandBuffer layoutCmd = device.createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
+
+	// Setup memory
+	vkGetImageMemoryRequirements(device, depth_image.image, &memReqs);
+
+	memAllocInfo.allocationSize = memReqs.size;
+	memAllocInfo.memoryTypeIndex = device.getMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VK_CHECK_RESULT(vkAllocateMemory(device, &memAllocInfo, nullptr, &depth_image.mem));
+	VK_CHECK_RESULT(vkBindImageMemory(device, depth_image.image, depth_image.mem, 0));
+
+	// Setup image barrier
+	VkImageSubresourceRange subresourceRange = {};
+	subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	subresourceRange.baseMipLevel = 0;
+	subresourceRange.levelCount = 1;
+	subresourceRange.layerCount = 1;
+	vks::tools::setImageLayout(
+		layoutCmd,
+		depth_image.image,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		subresourceRange);
+
+	device.flushCommandBuffer(layoutCmd, queue, true);
+
+	// Setup view
+	VkImageViewCreateInfo view = vks::initializers::imageViewCreateInfo();
+	view.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	view.format = depth_format;
+	view.components = { VK_COMPONENT_SWIZZLE_R };
+	view.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT , 0, 1, 0, 1 };
+	view.subresourceRange.layerCount = 1;
+	view.image = depth_image.image;
+	VK_CHECK_RESULT(vkCreateImageView(device, &view, nullptr, &depth_image.view));
+
+	// Setup sampler
+	VkSamplerCreateInfo sampler = vks::initializers::samplerCreateInfo();
+	sampler.magFilter = VK_FILTER_NEAREST;
+	sampler.minFilter = VK_FILTER_NEAREST;
+	sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+	sampler.addressModeV = sampler.addressModeU;
+	sampler.addressModeW = sampler.addressModeU;
+	sampler.mipLodBias = 0.0f;
+	sampler.maxAnisotropy = 1.0f;
+	sampler.minLod = 0.0f;
+	sampler.maxLod = 1.0f;
+	sampler.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+	VK_CHECK_RESULT(vkCreateSampler(device.logicalDevice, &sampler, nullptr, &depth_image.sampler));
+
+	// Setup descriptor
+	depth_image.descriptor =
+		vks::initializers::descriptorImageInfo(
+			depth_image.sampler,
+			depth_image.view,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
+
+void HizPipeline::destroyDepth()
+{
+	vkDestroySampler(device, depth_image.sampler, nullptr);
+	vkDestroyImageView(device, depth_image.view, nullptr);
+	vkDestroyImage(device, depth_image.image, nullptr);
+	vkFreeMemory(device, depth_image.mem, nullptr);
+}
+
+void HizPipeline::copyDepth(VkCommandBuffer cmd_buffer, VkImage depth_stencil_image)
+{
+	vks::tools::setImageLayout(
+		cmd_buffer,
+		depth_stencil_image,
+		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+	VkImageSubresourceRange subresourceRange = {};
+	subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	subresourceRange.baseMipLevel = 0;
+	subresourceRange.levelCount = 1;
+	subresourceRange.baseArrayLayer = 0;
+	subresourceRange.layerCount = 1;
+
+	// Change image layout of one cubemap face to transfer destination
+	vks::tools::setImageLayout(
+		cmd_buffer,
+		depth_image.image,
+		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+	// Copy region for transfer from framebuffer to cube face
+	VkImageCopy copyRegion = {};
+
+	copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	copyRegion.srcSubresource.baseArrayLayer = 0;
+	copyRegion.srcSubresource.mipLevel = 0;
+	copyRegion.srcSubresource.layerCount = 1;
+	copyRegion.srcOffset = { 0, 0, 0 };
+
+	copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+	copyRegion.dstSubresource.baseArrayLayer = 0;
+	copyRegion.dstSubresource.mipLevel = 0;
+	copyRegion.dstSubresource.layerCount = 1;
+	copyRegion.dstOffset = { 0, 0, 0 };
+
+	copyRegion.extent.width = depth_image.width;
+	copyRegion.extent.height = depth_image.height;
+	copyRegion.extent.depth = 1;
+
+	// Put image copy into command buffer
+	vkCmdCopyImage(
+		cmd_buffer,
+		depth_stencil_image,
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		depth_image.image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		1,
+		&copyRegion);
+
+	// Transform framebuffer color attachment back
+	vks::tools::setImageLayout(
+		cmd_buffer,
+		depth_stencil_image,
+		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+		VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+	// Change image layout of copied face to shader read
+	vks::tools::setImageLayout(
+		cmd_buffer,
+		depth_image.image,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		subresourceRange);
+}
+
+void HizPipeline::resize(uint32_t width, uint32_t height, VkQueue queue)
+{
+	depth_image.width = width;
+	depth_image.height = height;
+
+	destroyDepth();
+	prepareDepth(queue,depth_image.format);
+
+	destroyHiz();
 	prepareHiz();
 
 	vkDestroyDescriptorPool(device, descriptor_pool, nullptr);
@@ -160,12 +322,12 @@ void HizPipeline::resize()
 		VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptor_sets[i]));
 	}
 
-	
 	buildCommandBuffer();
 }
 
-void HizPipeline::prepare(VkPipelineCache& pipeline_cache)
+void HizPipeline::prepare(VkQueue queue, VkFormat depth_format)
 {
+	prepareDepth(queue, depth_format);
 	prepareHiz();
 
 	// Prepare descriptor pool
@@ -265,16 +427,16 @@ void HizPipeline::buildCommandBuffer()
 	for (uint32_t i = 0; i < hiz_image.depth_pyramid_levels; i++)
 	{
 		VkDescriptorImageInfo dstTarget;
-		dstTarget.sampler = scene_pipeline.depth_image.sampler;
+		dstTarget.sampler = depth_image.sampler;
 		dstTarget.imageView = hiz_image.views[i];
 		dstTarget.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
 		VkDescriptorImageInfo srcTarget;
-		srcTarget.sampler = scene_pipeline.depth_image.sampler;
+		srcTarget.sampler = depth_image.sampler;
 
 		if (i == 0)
 		{
-			srcTarget.imageView = scene_pipeline.depth_image.view;
+			srcTarget.imageView = depth_image.view;
 			srcTarget.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		}
 		else
@@ -304,8 +466,8 @@ void HizPipeline::buildCommandBuffer()
 
 		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_sets[i], 0, nullptr);
 
-		uint32_t levelWidth = scene_pipeline.depth_image.width >> i;
-		uint32_t levelHeight = scene_pipeline.depth_image.height >> i;
+		uint32_t levelWidth = depth_image.width >> i;
+		uint32_t levelHeight = depth_image.height >> i;
 
 		if (levelHeight < 1) levelHeight = 1;
 		if (levelWidth < 1) levelWidth = 1;
