@@ -47,7 +47,7 @@ void main()
 {
 	//texture(textures[nonuniformEXT(inTexIndex)], inUV);
 	// vec4 color = texture(textureArray[nonuniformEXT(textureIndex.baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
-vec4 color = texture(textureArray[nonuniformEXT(objectData[inIndex-1].baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
+vec4 color = texture(textureArray[nonuniformEXT(objectData[inIndex].baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
 
 	if (objectData[inIndex].alphaMode == 1) {
 		if (color.a < objectData[inIndex].alphaCutOff) {
@@ -59,7 +59,7 @@ vec4 color = texture(textureArray[nonuniformEXT(objectData[inIndex-1].baseColorT
 	vec3 T = normalize(inTangent.xyz);
 	vec3 B = cross(inNormal, inTangent.xyz) * inTangent.w;
 	mat3 TBN = mat3(T, B, N);
-	N = TBN * normalize(texture(textureArray[nonuniformEXT(objectData[inIndex-1].normalTextureIndex)], inUV).xyz * 2.0 - vec3(1.0));
+	N = TBN * normalize(texture(textureArray[nonuniformEXT(objectData[inIndex].normalTextureIndex)], inUV).xyz * 2.0 - vec3(1.0));
 
 	const float ambient = 0.1;
 	vec3 L = normalize(inLightVec);

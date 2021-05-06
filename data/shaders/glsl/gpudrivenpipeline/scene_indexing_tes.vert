@@ -61,7 +61,7 @@ void main()
 	outColor = inColor;
 	outUV = inUV;
 	outTangent = inTangent;
-	outIndex = inIndex;
+	outIndex = gl_InstanceIndex;
 
 	vec3 N = normalize(inNormal);
 	vec3 T = normalize(inTangent.xyz);
