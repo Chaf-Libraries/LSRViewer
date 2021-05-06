@@ -22,6 +22,6 @@ layout(location = 0) out vec4 outColor;
 void main() {
     // outColor = vec4(texture(input_texture, (inUV*2+1)/2).xyz, 1.0);
     outColor = textureLod(input_texture, (inUV*2+1) * 0.5, 0);
-    outColor=ubo.range.z/(ubo.range.w-outColor*(ubo.range.w-ubo.range.z));
+    outColor = ubo.range.z/(ubo.range.w-outColor*(ubo.range.w-ubo.range.z));
     //  outColor = vec4((inUV*2+1) * 0.5,0,1);
 }

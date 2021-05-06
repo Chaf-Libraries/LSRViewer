@@ -17,7 +17,7 @@ Application::Application() : VulkanExampleBase(ENABLE_VALIDATION)
 	camera.flipY = true;
 	camera.setPosition(glm::vec3(0.0f, 1.0f, 0.0f));
 	camera.setRotation(glm::vec3(0.0f, -90.0f, 0.0f));
-	camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 100000.f);
+	camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 1000.f);
 	camera.setMovementSpeed(10.f);
 	camera.setRotationSpeed(0.1f);
 	settings.overlay = true;
@@ -130,9 +130,9 @@ void Application::prepare()
 	}
 
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza_1/Sponza01.gltf", queue);
-	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/simple.gltf", queue);
+	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/9/test.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/bonza/Bonza4X.gltf", queue);
-	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
+	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/E/untitled2.gltf", queue);
 
 	scene->buffer_cacher = std::make_unique<chaf::BufferCacher>(*vulkanDevice, queue);
@@ -267,16 +267,10 @@ void Application::draw()
 
 	memcpy(&culling_pipeline->indirect_status.draw_count[0], culling_pipeline->indircet_draw_count_buffer.mapped, sizeof(uint32_t) * culling_pipeline->indirect_status.draw_count.size());
 
-	for (auto& node : scene->getNodes())
+	cull_count = 0;
+	for (auto& draw_count : culling_pipeline->indirect_status.draw_count)
 	{
-		if (node->hasComponent<chaf::Mesh>())
-		{
-			auto& mesh = node->getComponent<chaf::Mesh>();
-			for (uint32_t i = 0; i < mesh.getPrimitives().size(); i++)
-			{
-				mesh.getPrimitives()[i].visible = culling_pipeline->indirect_status.draw_count[culling_pipeline->id_lookup[node->getID()][i]];
-			}
-		}
+		cull_count += draw_count;
 	}
 }
 
@@ -297,7 +291,7 @@ void Application::update()
 	scene_pipeline->sceneUBO.values.projection = camera.matrices.perspective;
 	scene_pipeline->sceneUBO.values.view = camera.matrices.view;
 	scene_pipeline->sceneUBO.values.viewPos = camera.viewPos;
-	scene_pipeline->sceneUBO.values.range = { static_cast<float>(width), static_cast<float>(height), camera.getFarClip(), camera.getNearClip() };
+	scene_pipeline->sceneUBO.values.range = { static_cast<float>(width), static_cast<float>(height), camera.getNearClip(), camera.getFarClip() };
 	chaf::Frustum frustum;
 	frustum.update(camera.matrices.perspective * camera.matrices.view);
 	memcpy(scene_pipeline->sceneUBO.values.frustum, frustum.planes.data(), sizeof(glm::vec4) * 6);
@@ -355,9 +349,8 @@ void Application::updateOverlay()
 
 	ImGui::TextUnformatted((std::string("GPU: ") + deviceProperties.deviceName).c_str());
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (1000.0f / lastFPS), lastFPS);
-	ImGui::Text("ave fps: %.1d", ave_fps);
-	ImGui::Text("frame count: %d", count);
-	ImGui::Checkbox("begin benckmark", &begin);
+	ImGui::Text("total primitives: %d", culling_pipeline->primitive_count);
+	ImGui::Text("visible primitives: %d", cull_count);
 
 	if (ImGui::Button("screen shot"))
 	{

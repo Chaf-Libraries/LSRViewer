@@ -179,7 +179,7 @@ bool HizCheck(vec3 min_val, vec3 max_val, uint idx)
     }
 
     depth=ubo.range.w*ubo.range.z/(ubo.range.w-depth*(ubo.range.w-ubo.range.z));
-    // return true;
+
     if(min_z < depth)
     {
         return true;
