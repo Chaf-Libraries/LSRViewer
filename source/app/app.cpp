@@ -10,7 +10,7 @@
 #endif
 
 
-Application::Application(): VulkanExampleBase(ENABLE_VALIDATION)
+Application::Application() : VulkanExampleBase(ENABLE_VALIDATION)
 {
 	title = "LSRViewer";
 	camera.type = Camera::CameraType::firstperson;
@@ -96,7 +96,7 @@ void Application::buildCommandBuffers()
 		vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdSetViewport(drawCmdBuffers[i], 0, 1, &viewport);
 		vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
-		
+
 		scene_pipeline->CommandRecord(drawCmdBuffers[i], *culling_pipeline);
 
 		if (display_debug > 0)
@@ -146,12 +146,10 @@ void Application::prepare()
 	scene_pipeline->prepare(renderPass, queue);
 
 	debug_pipeline = std::make_unique<DebugPipeline>(*vulkanDevice);
-	debug_pipeline->setupDescriptors(*hiz_pipeline);
-	debug_pipeline->prepare(pipelineCache, renderPass);
+	debug_pipeline->setupDescriptors(*hiz_pipeline, scene_pipeline->sceneUBO.buffer);
+	debug_pipeline->prepare(renderPass);
 
 	culling_pipeline->prepare(queue, *scene_pipeline, *hiz_pipeline);
-
-
 
 	buildCommandBuffers();
 	prepared = true;
@@ -159,30 +157,30 @@ void Application::prepare()
 
 void Application::getEnabledFeatures()
 {
-	if (deviceFeatures.multiDrawIndirect) 
+	if (deviceFeatures.multiDrawIndirect)
 	{
 		enabledFeatures.multiDrawIndirect = VK_TRUE;
 	}
 
-	if (deviceFeatures.fillModeNonSolid) 
+	if (deviceFeatures.fillModeNonSolid)
 	{
 		enabledFeatures.fillModeNonSolid = VK_TRUE;
 	}
-	
-	if (deviceFeatures.sparseBinding && deviceFeatures.sparseResidencyImage2D) 
+
+	if (deviceFeatures.sparseBinding && deviceFeatures.sparseResidencyImage2D)
 	{
 		enabledFeatures.shaderResourceResidency = VK_TRUE;
 		enabledFeatures.shaderResourceMinLod = VK_TRUE;
 		enabledFeatures.sparseBinding = VK_TRUE;
 		enabledFeatures.sparseResidencyImage2D = VK_TRUE;
 	}
-	else 
+	else
 	{
 		std::cout << "Sparse binding not supported" << std::endl;
 	}
 
 	// Tessellation
-	if (deviceFeatures.tessellationShader) 
+	if (deviceFeatures.tessellationShader)
 	{
 		enabledFeatures.tessellationShader = VK_TRUE;
 	}
@@ -267,8 +265,6 @@ void Application::draw()
 
 	VulkanExampleBase::submitFrame();
 
-
-	/// ////////////////////////
 	memcpy(&culling_pipeline->indirect_status.draw_count[0], culling_pipeline->indircet_draw_count_buffer.mapped, sizeof(uint32_t) * culling_pipeline->indirect_status.draw_count.size());
 
 	for (auto& node : scene->getNodes())
@@ -288,7 +284,7 @@ void Application::render()
 {
 	draw();
 
-	if (camera.updated) 
+	if (camera.updated)
 	{
 		update();
 	}
@@ -337,32 +333,45 @@ void Application::updateOverlay()
 	// Status
 	static uint32_t last_fps = lastFPS;
 	static uint32_t ave_fps = lastFPS;
+	static uint32_t max_fps = 0;
+	static uint32_t min_fps = std::numeric_limits<uint32_t>::max();
 	static uint32_t count = 0;
 	static bool begin{ false };
 
-	if (lastFPS != last_fps&& lastFPS>0&&begin)
+	if (lastFPS != last_fps && lastFPS > 0 && begin)
 	{
-		ave_fps = (ave_fps * count + lastFPS) / (count+1);
+		ave_fps = (ave_fps * count + lastFPS) / (count + 1);
+		if (lastFPS > max_fps)
+		{
+			max_fps = lastFPS;
+		}
+		if (lastFPS < min_fps)
+		{
+			min_fps = lastFPS;
+		}
 		count++;
 		last_fps = lastFPS;
 	}
-	
+
 	ImGui::TextUnformatted((std::string("GPU: ") + deviceProperties.deviceName).c_str());
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (1000.0f / lastFPS), lastFPS);
 	ImGui::Text("ave fps: %.1d", ave_fps);
 	ImGui::Text("frame count: %d", count);
 	ImGui::Checkbox("begin benckmark", &begin);
 
-#if !defined(_DEBUG)
-	for (uint32_t i = 0; i < culling_pipeline->primitive_count; i++)
-	{
-		ImGui::Text("depth: %.3f, maxZ: %.3f , visibility: %d", culling_pipeline->debug_depth.depth[i], culling_pipeline->debug_z.z[i], culling_pipeline->indirect_status.draw_count[i]);
-	}
-#endif // _DEBUG
-
 	if (ImGui::Button("screen shot"))
 	{
 		saveScreenShot();
+	}
+
+	if (ImGui::CollapsingHeader("Benchmark"))
+	{
+		ImGui::Text("benchmark time: %d s", count);
+		ImGui::Text("ave fps: %.1d", ave_fps);
+		ImGui::Text("max fps: %.1d", max_fps);
+		ImGui::Text("min fps: %.1d", min_fps);
+
+		ImGui::Checkbox("begin benckmark", &begin);
 	}
 
 	if (ImGui::CollapsingHeader("Render Setting"))
@@ -391,7 +400,7 @@ void Application::updateOverlay()
 			UIOverlay.updated = true;
 		}
 
-		if(culling_pipeline->enable_hiz)
+		if (culling_pipeline->enable_hiz)
 		{
 			std::vector<const char*> hiz_mip_level;
 			std::vector<std::string> hiz_mip_level_str;
@@ -640,7 +649,7 @@ void Application::saveScreenShot()
 
 	// Transition swapchain image from present to transfer source layout
 	vks::tools::insertImageMemoryBarrier(
-		copyCmd,     
+		copyCmd,
 		srcImage,
 		VK_ACCESS_MEMORY_READ_BIT,
 		VK_ACCESS_TRANSFER_READ_BIT,
@@ -742,7 +751,7 @@ void Application::saveScreenShot()
 	current_time += "_" + std::to_string(ptm->tm_min);
 	current_time += "_" + std::to_string(ptm->tm_sec);
 
-	std::ofstream file("../screenshot/screenshot_"+ current_time +".ppm", std::ios::out | std::ios::binary);
+	std::ofstream file("../screenshot/screenshot_" + current_time + ".ppm", std::ios::out | std::ios::binary);
 
 	// ppm header
 	file << "P6\n" << width << "\n" << height << "\n" << 255 << "\n";

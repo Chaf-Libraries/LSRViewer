@@ -294,6 +294,23 @@ namespace chaf
 	void SceneLoader::parseImages(vks::VulkanDevice& device, tinygltf::Model& model, Scene& scene, VkQueue copy_queue)
 	{
 		scene.images.resize(model.images.size());
+		
+		// TODO: multi-thread
+		//std::vector<std::future<void>> futures;
+
+		//for (size_t i = 0; i < model.images.size(); i++) 
+		//{
+		//	futures.push_back(chaf::Cacher::getThreadPool().push([i, &model, &device, copy_queue,&scene](size_t) {
+		//		tinygltf::Image& glTFImage = model.images[i];
+		//		scene.images[i].texture.loadFromFile(path + "/" + glTFImage.uri, &device, copy_queue);
+		//		}));
+		//}
+
+		//for (auto& future : futures)
+		//{
+		//	future.get();
+		//}
+
 		for (size_t i = 0; i < model.images.size(); i++) 
 		{
 			tinygltf::Image& glTFImage = model.images[i];
@@ -324,6 +341,31 @@ namespace chaf
 			scene.materials[i].value.emissiveTextureIndex = (int32_t)glTFMaterial.emissiveTexture.index;
 			scene.materials[i].value.occlusionTextureIndex = (int32_t)glTFMaterial.occlusionTexture.index;
 			scene.materials[i].value.metallicRoughnessTextureIndex = (int32_t)glTFMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
+
+			if (scene.materials[i].value.baseColorTextureIndex > 0)
+			{
+				scene.materials[i].value.baseColorTextureIndex = scene.textures[scene.materials[i].value.baseColorTextureIndex].imageIndex;
+			}
+
+			if (scene.materials[i].value.normalTextureIndex > 0)
+			{
+				scene.materials[i].value.normalTextureIndex = scene.textures[scene.materials[i].value.normalTextureIndex].imageIndex;
+			}
+
+			if (scene.materials[i].value.emissiveTextureIndex > 0)
+			{
+				scene.materials[i].value.emissiveTextureIndex = scene.textures[scene.materials[i].value.emissiveTextureIndex].imageIndex;
+			}
+
+			if (scene.materials[i].value.occlusionTextureIndex > 0)
+			{
+				scene.materials[i].value.occlusionTextureIndex = scene.textures[scene.materials[i].value.occlusionTextureIndex].imageIndex;
+			}
+
+			if (scene.materials[i].value.metallicRoughnessTextureIndex > 0)
+			{
+				scene.materials[i].value.metallicRoughnessTextureIndex = scene.textures[scene.materials[i].value.metallicRoughnessTextureIndex].imageIndex;
+			}
 
 			scene.materials[i].value.baseColorFactor = { glTFMaterial.pbrMetallicRoughness.baseColorFactor[0], glTFMaterial.pbrMetallicRoughness.baseColorFactor[1], glTFMaterial.pbrMetallicRoughness.baseColorFactor[2], glTFMaterial.pbrMetallicRoughness.baseColorFactor[3] };
 			scene.materials[i].value.emissiveFactor = { glTFMaterial.emissiveFactor[0], glTFMaterial.emissiveFactor[1], glTFMaterial.emissiveFactor[2] };

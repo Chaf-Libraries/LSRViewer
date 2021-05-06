@@ -15,12 +15,6 @@
 
 #include <vk_mem_alloc.h>
 
-#define HIZ_ENABLE
-//#define VIS_HIZ
-//#define CPU_FRUSTUM
-#define MULTI_THREAD
-
-
 class Application :public VulkanExampleBase
 {
 public:
@@ -63,4 +57,6 @@ private:
 	std::unique_ptr<DebugPipeline> debug_pipeline;
 
 	int32_t display_debug{ 0 };
+
+	uint32_t cull_count{ 0 };
 };

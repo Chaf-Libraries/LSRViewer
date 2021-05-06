@@ -34,8 +34,6 @@ void ScenePipeline::destroy()
 void ScenePipeline::prepare(VkRenderPass render_pass, VkQueue queue)
 {
 	// Scene Primitive count
-	uint32_t maxCount = 0;
-
 	maxCount = scene.images.size() > device.properties.limits.maxPerStageDescriptorUniformBuffers ? device.properties.limits.maxPerStageDescriptorUniformBuffers : static_cast<uint32_t>(scene.images.size());
 
 	vks::Buffer stagingBuffer;
@@ -146,26 +144,7 @@ void ScenePipeline::prepare(VkRenderPass render_pass, VkQueue queue)
 
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptor_set.object));
 
-	// Update texture binding
-	std::vector<VkDescriptorImageInfo> textureDescriptors(maxCount);
-	for (size_t i = 0; i < maxCount; i++)
-	{
-		textureDescriptors[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		// TODO: Use Image Cacher
-		textureDescriptors[i].sampler = scene.images[i].texture.sampler;
-		textureDescriptors[i].imageView = scene.images[i].texture.view;
-	}
-
-	VkWriteDescriptorSet writeDescriptorSet = {};
-	writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	writeDescriptorSet.dstBinding = 0;
-	writeDescriptorSet.dstArrayElement = 0;
-	writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	writeDescriptorSet.descriptorCount = maxCount;
-	writeDescriptorSet.dstSet = descriptor_set.object;
-	writeDescriptorSet.pImageInfo = textureDescriptors.data();
-
-	vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
+	updateDescriptors();
 
 	setupPipeline(render_pass);	
 
@@ -277,6 +256,29 @@ void ScenePipeline::CommandRecord(VkCommandBuffer& cmd_buffer, CullingPipeline& 
 			}
 		}
 	}
+}
+
+void ScenePipeline::updateDescriptors()
+{
+	std::vector<VkDescriptorImageInfo> textureDescriptors(maxCount);
+	for (size_t i = 0; i < maxCount; i++)
+	{
+		textureDescriptors[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		// TODO: Use Image Cacher
+		textureDescriptors[i].sampler = scene.images[i].texture.sampler;
+		textureDescriptors[i].imageView = scene.images[i].texture.view;
+	}
+
+	VkWriteDescriptorSet writeDescriptorSet = {};
+	writeDescriptorSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	writeDescriptorSet.dstBinding = 0;
+	writeDescriptorSet.dstArrayElement = 0;
+	writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	writeDescriptorSet.descriptorCount = maxCount;
+	writeDescriptorSet.dstSet = descriptor_set.object;
+	writeDescriptorSet.pImageInfo = textureDescriptors.data();
+
+	vkUpdateDescriptorSets(device, 1, &writeDescriptorSet, 0, nullptr);
 }
 
 void ScenePipeline::setupDepth(uint32_t width, uint32_t height, VkFormat depthFormat, VkQueue queue)

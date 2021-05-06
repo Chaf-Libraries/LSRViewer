@@ -60,12 +60,12 @@ void main()
 	outColor = inColor;
 	outUV = inUV;
 	outTangent = inTangent;
-	outIndex = inIndex;
-	gl_Position = uboScene.projection * uboScene.view *objectData[inIndex].model*  vec4(inPos.xyz, 1.0);
+	outIndex = gl_InstanceIndex;
+	gl_Position = uboScene.projection * uboScene.view *objectData[gl_InstanceIndex].model*  vec4(inPos.xyz, 1.0);
 	gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 
-	outNormal = mat3(objectData[inIndex].model) * inNormal;
-	vec4 pos = objectData[inIndex].model * vec4(inPos, 1.0);
+	outNormal = mat3(objectData[gl_InstanceIndex].model) * inNormal;
+	vec4 pos = objectData[gl_InstanceIndex].model * vec4(inPos, 1.0);
 	outLightVec = uboScene.lightPos.xyz - pos.xyz;
 	outViewVec = uboScene.viewPos.xyz - pos.xyz;
 }

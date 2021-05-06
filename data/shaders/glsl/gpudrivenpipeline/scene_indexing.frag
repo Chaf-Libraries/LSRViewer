@@ -44,7 +44,7 @@ layout (location = 0) out vec4 outFragColor;
 void main() 
 {
 	//texture(textures[nonuniformEXT(inTexIndex)], inUV);
-	vec4 color = texture(textureArray[nonuniformEXT(objectData[inIndex-1].baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
+	vec4 color = texture(textureArray[nonuniformEXT(objectData[inIndex].baseColorTextureIndex)], inUV) * vec4(inColor, 1.0);
 
 	if (objectData[inIndex].alphaMode == 1) {
 		if (color.a < objectData[inIndex].alphaCutOff) {
@@ -56,7 +56,7 @@ void main()
 	vec3 T = normalize(inTangent.xyz);
 	vec3 B = cross(inNormal, inTangent.xyz) * inTangent.w;
 	mat3 TBN = mat3(T, B, N);
-	N = TBN * normalize(texture(textureArray[nonuniformEXT(objectData[inIndex-1].normalTextureIndex)], inUV).xyz * 2.0 - vec3(1.0));
+	N = TBN * normalize(texture(textureArray[nonuniformEXT(objectData[inIndex].normalTextureIndex)], inUV).xyz * 2.0 - vec3(1.0));
 
 	const float ambient = 0.1;
 	vec3 L = normalize(inLightVec);
@@ -64,7 +64,7 @@ void main()
 	vec3 R = reflect(-L, N);
 	vec3 diffuse = max(dot(N, L), ambient).rrr;
 	float specular = pow(max(dot(R, V), 0.0), 32.0);
-	outFragColor = vec4(diffuse * color.rgb + specular, color.a);
+	outFragColor = vec4(diffuse * color.rgb, color.a);
 	//outFragColor = color;
 	// float depth=texture(depthMap, inUV).x;
 	//outFragColor = vec4(float(objectData[inIndex].baseColorTextureIndex)/25);

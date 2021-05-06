@@ -23,6 +23,8 @@ public:
 
 	void CommandRecord(VkCommandBuffer& cmd_buffer, CullingPipeline& culling_pipeline);
 
+	void updateDescriptors();
+
 public:
 	struct SceneUBO
 	{
@@ -63,6 +65,8 @@ public:
 		VkDescriptorSet scene{ VK_NULL_HANDLE };
 		VkDescriptorSet object{ VK_NULL_HANDLE };
 	}descriptor_set;
+
+	uint32_t maxCount{ 0 };
 
 	bool has_init{ false };
 

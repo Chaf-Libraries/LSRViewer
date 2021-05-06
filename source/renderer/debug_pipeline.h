@@ -15,11 +15,9 @@ public:
 
 	void buildCommandBuffer(VkCommandBuffer& cmd_buffer, VkRenderPassBeginInfo& renderPassBeginInfo);
 
-	void setupDescriptors(HizPipeline& hiz_pipeline);
+	void setupDescriptors(HizPipeline& hiz_pipeline, vks::Buffer& uniform_buffer);
 
-	//void setupDescriptors(ScenePipeline& scene_pipeline);
-
-	void prepare(VkPipelineCache& pipeline_cache, VkRenderPass& render_pass);
+	void prepare(VkRenderPass& render_pass);
 
 	void updateDescriptors(HizPipeline& hiz_pipeline, uint32_t index);
 

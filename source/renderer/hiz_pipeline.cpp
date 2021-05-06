@@ -108,11 +108,11 @@ void HizPipeline::prepareHiz()
 	sampler.minLod = 0; 
 	sampler.maxLod = static_cast<float>(hiz_image.depth_pyramid_levels);
 
-	//VkSamplerReductionModeCreateInfoEXT createInfoReduction = {};
+	VkSamplerReductionModeCreateInfoEXT createInfoReduction = {};
 
-	//createInfoReduction.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT;
-	//createInfoReduction.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
-	//sampler.pNext = &createInfoReduction;
+	createInfoReduction.sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO_EXT;
+	createInfoReduction.reductionMode = VK_SAMPLER_REDUCTION_MODE_MAX;
+	sampler.pNext = &createInfoReduction;
 
 	VK_CHECK_RESULT(vkCreateSampler(device, &sampler, 0, &hiz_image.sampler));
 }

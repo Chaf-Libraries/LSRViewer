@@ -46,13 +46,14 @@ namespace chaf
 
 		reset();
 
-		update(glm::vec4(min_.x, min_.y, max_.z, 1.0f) * transform);
-		update(glm::vec4(min_.x, max_.y, min_.z, 1.0f) * transform);
-		update(glm::vec4(min_.x, max_.y, max_.z, 1.0f) * transform);
-		update(glm::vec4(max_.x, min_.y, min_.z, 1.0f) * transform);
-		update(glm::vec4(max_.x, min_.y, max_.z, 1.0f) * transform);
-		update(glm::vec4(max_.x, max_.y, min_.z, 1.0f) * transform);
-		update(glm::vec4(max_, 1.0f) * transform);
+		update(transform * glm::vec4(min_.x, min_.y, max_.z, 1.0f));
+		update(transform * glm::vec4(min_.x, max_.y, min_.z, 1.0f));
+		update(transform * glm::vec4(min_.x, max_.y, max_.z, 1.0f));
+		update(transform * glm::vec4(max_.x, min_.y, min_.z, 1.0f));
+		update(transform * glm::vec4(max_.x, min_.y, max_.z, 1.0f));
+		update(transform * glm::vec4(max_.x, max_.y, min_.z, 1.0f));
+		update(transform * glm::vec4(max_, 1.0f));
+		update(transform * glm::vec4(min_, 1.0f));
 	}
 
 	glm::vec3 AABB::getScale() const
@@ -77,8 +78,8 @@ namespace chaf
 
 	void AABB::reset()
 	{
-		min = std::numeric_limits<glm::vec3>::max();
-		max = -std::numeric_limits<glm::vec3>::max();
+		min = glm::vec3(std::numeric_limits<float>::max());
+		max = glm::vec3(-std::numeric_limits<float>::max());
 	}
 
 	void AABB::set(const glm::vec3& min, const glm::vec3& max)

@@ -38,8 +38,6 @@ namespace chaf
 		return image;
 	}
 
-	
-
 	void Texture2D::loadFromFile(const std::string& filename, vks::VulkanDevice* device, VkQueue copy_queue, VkImageUsageFlags image_usage_flags, VkImageLayout image_layout, bool force_linear)
 	{
 		auto img = Texture::load(filename, device);

@@ -26,11 +26,12 @@ void DebugPipeline::buildCommandBuffer(VkCommandBuffer& cmd_buffer, VkRenderPass
 	//vkCmdEndRenderPass(cmd_buffer);
 }
 
-void DebugPipeline::setupDescriptors(HizPipeline& hiz_pipeline)
+void DebugPipeline::setupDescriptors(HizPipeline& hiz_pipeline, vks::Buffer& uniform_buffer)
 {
 	// Prepare descriptor pool
 	std::vector<VkDescriptorPoolSize> poolSizes = {
-		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
+		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1),
+		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1)
 	};
 
 	// Setting descriptor pool
@@ -43,7 +44,12 @@ void DebugPipeline::setupDescriptors(HizPipeline& hiz_pipeline)
 		vks::initializers::descriptorSetLayoutBinding(
 			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			VK_SHADER_STAGE_FRAGMENT_BIT,
-			0)
+			0),
+		// Binding 0: render image
+		vks::initializers::descriptorSetLayoutBinding(
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			1)
 	};
 
 	// Create descriptor layout
@@ -78,67 +84,13 @@ void DebugPipeline::setupDescriptors(HizPipeline& hiz_pipeline)
 	// Update descriptor set
 	std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
 			vks::initializers::writeDescriptorSet(descriptor_set, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &dstTarget),
+			vks::initializers::writeDescriptorSet(descriptor_set, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, &uniform_buffer.descriptor),
 	};
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 }
 
-//void DebugPipeline::setupDescriptors(HizPipeline& hiz_pipeline)
-//{
-//	// Prepare descriptor pool
-//	std::vector<VkDescriptorPoolSize> poolSizes = {
-//		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
-//	};
-//
-//	// Setting descriptor pool
-//	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, 1);
-//	VK_CHECK_RESULT(vkCreateDescriptorPool(device.logicalDevice, &descriptorPoolInfo, nullptr, &descriptor_pool));
-//
-//	// Setting layout bindings
-//	std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
-//		// Binding 0: render image
-//		vks::initializers::descriptorSetLayoutBinding(
-//			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-//			VK_SHADER_STAGE_FRAGMENT_BIT,
-//			0)
-//	};
-//
-//	// Create descriptor layout
-//	VkDescriptorSetLayoutCreateInfo descriptorLayout =
-//		vks::initializers::descriptorSetLayoutCreateInfo(
-//			setLayoutBindings.data(),
-//			static_cast<uint32_t>(setLayoutBindings.size()));
-//
-//	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device.logicalDevice, &descriptorLayout, nullptr, &descriptor_set_layout));
-//
-//	// Pipeline layout
-//	VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo =
-//		vks::initializers::pipelineLayoutCreateInfo(
-//			&descriptor_set_layout,
-//			1);
-//	VK_CHECK_RESULT(vkCreatePipelineLayout(device.logicalDevice, &pPipelineLayoutCreateInfo, nullptr, &pipeline_layout));
-//
-//	// Descriptor sets
-//	VkDescriptorSetAllocateInfo allocInfo =
-//		vks::initializers::descriptorSetAllocateInfo(
-//			descriptor_pool,
-//			&descriptor_set_layout,
-//			1);
-//
-//	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptor_set));
-//
-//	VkDescriptorImageInfo dstTarget;
-//	dstTarget = hiz_pipeline.depth_image.descriptor;
-//
-//	// Update descriptor set
-//	std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
-//			vks::initializers::writeDescriptorSet(descriptor_set, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 0, &dstTarget),
-//	};
-//
-//	vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
-//}
-
-void DebugPipeline::prepare(VkPipelineCache& pipeline_cache, VkRenderPass& render_pass)
+void DebugPipeline::prepare(VkRenderPass& render_pass)
 {
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCI = vks::initializers::pipelineInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, VK_FALSE);
 	VkPipelineRasterizationStateCreateInfo rasterizationStateCI = vks::initializers::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_FRONT_BIT, VK_FRONT_FACE_CLOCKWISE, 0);

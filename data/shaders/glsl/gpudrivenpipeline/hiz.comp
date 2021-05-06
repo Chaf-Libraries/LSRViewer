@@ -2,7 +2,7 @@
 
 layout (local_size_x = 32, local_size_y = 32) in;
 
-layout (binding = 0, r32f) uniform image2D result_image;
+layout (binding = 0, r32f) writeonly uniform image2D result_image;
 
 layout (binding = 1) uniform sampler2D input_image;
 
@@ -15,11 +15,36 @@ void main()
 {
    	uvec2 pos = gl_GlobalInvocationID.xy;
 
+	ivec2 MipSize=ivec2(reduce.reduce_data);
+
 	// Sampler is set up to do min reduction, so this computes the minimum depth of a 2x2 texel quad
-	float depth_1 = texture(input_image, vec2(float(pos.x)/reduce.reduce_data.x, float(pos.y)/reduce.reduce_data.y)).x;
-	float depth_2 = texture(input_image, vec2(float(pos.x)/reduce.reduce_data.x, float(pos.y+1)/reduce.reduce_data.y)).x;
-	float depth_3 = texture(input_image, vec2(float(pos.x+1)/reduce.reduce_data.x, float(pos.y)/reduce.reduce_data.y)).x;
-	float depth_4 = texture(input_image, vec2(float(pos.x+1)/reduce.reduce_data.x, float(pos.y+1)/reduce.reduce_data.y)).x;
-    float depth = max(max(depth_1, depth_2), max(depth_3, depth_4));
+	vec4 texels;
+	vec2 texCoord=vec2(float(pos.x)/reduce.reduce_data.x, float(pos.y)/reduce.reduce_data.y);
+    texels.x = texture(input_image, texCoord).x;
+    texels.y = textureOffset(input_image, texCoord, ivec2(-1, 0)).x;
+    texels.z = textureOffset(input_image, texCoord, ivec2(-1,-1)).x;
+    texels.w = textureOffset(input_image, texCoord, ivec2( 0,-1)).x;
+
+	float depth = max(max(texels.x, texels.y), max(texels.z, texels.w));
+	
+	vec3 extra;
+	if((MipSize.x&1)!=0&&(int(pos.x)==MipSize.x-3))
+	{
+		if (((MipSize.y & 1) != 0) && (int(pos.y) == MipSize.y-3)) 
+        {
+            extra.z = textureOffset(input_image, texCoord, ivec2(1, 1)).x;
+            depth = max(depth, extra.z);
+        }
+        extra.x = textureOffset(input_image, texCoord, ivec2(1,  0)).x;
+        extra.y = textureOffset(input_image, texCoord, ivec2(1, -1)).x;
+        depth = max(depth, max(extra.x, extra.y));
+	}
+	else if (((MipSize.y & 1) != 0) && (int(pos.y) == MipSize.y-3)) 
+	{
+        extra.x = textureOffset(input_image, texCoord, ivec2( 0, 1)).x;
+        extra.y = textureOffset(input_image, texCoord, ivec2(-1, 1)).x;
+        depth = max(depth, max(extra.x, extra.y));
+    }
+
 	imageStore(result_image, ivec2(pos), vec4(depth));
 }
