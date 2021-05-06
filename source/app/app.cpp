@@ -130,7 +130,8 @@ void Application::prepare()
 	}
 
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza_1/Sponza01.gltf", queue);
-	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/9/test.gltf", queue);
+	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/11/test.gltf", queue);
+	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/audi/auti03.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/bonza/Bonza4X.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/E/untitled2.gltf", queue);
