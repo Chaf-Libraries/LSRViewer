@@ -77,22 +77,22 @@ void main()
     float tessb = ComputeTessLevel(pb, pc);
     float tessc = ComputeTessLevel(pc, pa);
 
-    if (gl_InvocationID == 0)
-    {
-        gl_TessLevelOuter[0] = tessb;
-        gl_TessLevelOuter[1] = tessc;
-        gl_TessLevelOuter[2] = tessa;
-        gl_TessLevelInner[0] = max(tessa, max(tessb, tessc));
-    }
+
+    gl_TessLevelOuter[0] = tessb;
+    gl_TessLevelOuter[1] = tessc;
+    gl_TessLevelOuter[2] = tessa;
+    gl_TessLevelInner[0] = max(tessa, max(tessb, tessc));
 
     // Output position patch 1
     
     outPosPatch.pos[0] = pa;
     outPosPatch.pos[1] = ProjectToPlane(pa, pb, nb);
     outPosPatch.pos[2] = ProjectToPlane(pa, pc, nc);
+
     outPosPatch.pos[3] = ProjectToPlane(pb, pa, na);
     outPosPatch.pos[4] = pb;
     outPosPatch.pos[5] = ProjectToPlane(pb, pc, nc);
+    
     outPosPatch.pos[6] = ProjectToPlane(pc, pa, na);
     outPosPatch.pos[7] = ProjectToPlane(pc, pb, nb);
     outPosPatch.pos[8] = pc;  
