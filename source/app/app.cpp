@@ -360,6 +360,7 @@ void Application::updateOverlay()
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (1000.0f / lastFPS), lastFPS);
 	ImGui::Text("total primitives: %d", culling_pipeline->primitive_count);
 	ImGui::Text("visible primitives: %d", cull_count);
+	ImGui::Text("triangles number: %d", scene->index_count / 3);
 
 	if (ImGui::Button("screen shot"))
 	{
