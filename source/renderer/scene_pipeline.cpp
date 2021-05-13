@@ -67,7 +67,7 @@ void ScenePipeline::prepare(VkRenderPass render_pass, VkQueue queue)
 		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1),
 		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxCount)
 	};
-	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, maxCount);
+	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, maxCount + 2);
 	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr, &descriptor_pool));
 
 	// Prepare descriptor set layout
@@ -226,7 +226,7 @@ void ScenePipeline::setupPipeline(VkRenderPass render_pass)
 	VK_CHECK_RESULT(vkCreateGraphicsPipelines(device, pipeline_cache, 1, &pipelineCI, nullptr, &pipeline));
 }
 
-void ScenePipeline::CommandRecord(VkCommandBuffer& cmd_buffer, CullingPipeline& culling_pipeline)
+void ScenePipeline::commandRecord(VkCommandBuffer& cmd_buffer, CullingPipeline& culling_pipeline)
 {
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &descriptor_set.scene, 0, nullptr);
 	vkCmdBindDescriptorSets(cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 1, 1, &descriptor_set.object, 0, nullptr);

@@ -21,7 +21,7 @@ public:
 
 	void setupPipeline(VkRenderPass render_pass);
 
-	void CommandRecord(VkCommandBuffer& cmd_buffer, CullingPipeline& culling_pipeline);
+	void commandRecord(VkCommandBuffer& cmd_buffer, CullingPipeline& culling_pipeline);
 
 	void updateDescriptors();
 

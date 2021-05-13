@@ -91,6 +91,9 @@ namespace chaf
 		vks::Buffer object_buffer;
 
 		std::unique_ptr<BufferCacher> buffer_cacher;
+
+		size_t index_count{ 0 };
+		size_t vertex_count{ 0 };
 	};
 	
 

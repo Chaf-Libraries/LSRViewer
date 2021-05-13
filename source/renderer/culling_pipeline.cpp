@@ -274,6 +274,8 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 
 	indirect_commands.resize(primitive_count);
 
+	uint32_t idx = 0;
+
 	for (auto& node : scene.getNodes())
 	{
 		if (node->hasComponent<chaf::Mesh>())
@@ -287,7 +289,7 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 				chaf::AABB world_bounds = { mesh_bounds.getMin(), mesh_bounds.getMax() };
 				world_bounds.transform(transform.getWorldMatrix());
 
-				uint32_t idx = static_cast<uint32_t>(mesh.getPrimitives()[i].material_index);
+				//uint32_t idx = static_cast<uint32_t>(mesh.getPrimitives()[i].material_index);
 
 				instance_data[idx].max = world_bounds.getMax();
 				instance_data[idx].min = world_bounds.getMin();
@@ -303,6 +305,7 @@ void CullingPipeline::prepareBuffers(VkQueue& queue)
 					id_lookup[node->getID()] = {};
 				}
 				id_lookup[node->getID()].insert({ i, idx });
+				idx++;
 			}
 		}
 	}

@@ -12,6 +12,7 @@
 #include <renderer/scene_pipeline.h>
 #include <renderer/hiz_pipeline.h>
 #include <renderer/debug_pipeline.h>
+#include <renderer/vis_bindless_pipeline.h>
 
 #include <vk_mem_alloc.h>
 
@@ -55,8 +56,10 @@ private:
 	std::unique_ptr<ScenePipeline> scene_pipeline;
 	std::unique_ptr<HizPipeline> hiz_pipeline;
 	std::unique_ptr<DebugPipeline> debug_pipeline;
+	std::unique_ptr<VisBindlessPipeline> vis_bindless_pipeline;
 
 	int32_t display_debug{ 0 };
+	bool display_bindless_texture{ false };
 
 	uint32_t cull_count{ 0 };
 };

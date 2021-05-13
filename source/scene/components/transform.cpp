@@ -80,7 +80,7 @@ namespace chaf
 		if (parent && parent->hasComponent<Transform>())
 		{
 			auto& transform = parent->getComponent<Transform>();
-			world_matrix = world_matrix * transform.getWorldMatrix();
+			world_matrix = transform.getWorldMatrix() * world_matrix;
 		}
 
 		is_world_matrix_update = false;

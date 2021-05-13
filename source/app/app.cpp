@@ -97,7 +97,7 @@ void Application::buildCommandBuffers()
 		vkCmdSetViewport(drawCmdBuffers[i], 0, 1, &viewport);
 		vkCmdSetScissor(drawCmdBuffers[i], 0, 1, &scissor);
 
-		scene_pipeline->CommandRecord(drawCmdBuffers[i], *culling_pipeline);
+		scene_pipeline->commandRecord(drawCmdBuffers[i], *culling_pipeline);
 
 		if (display_debug > 0)
 		{
@@ -106,11 +106,16 @@ void Application::buildCommandBuffers()
 			vkCmdSetDepthTestEnableEXT(drawCmdBuffers[i], VK_TRUE);
 		}
 
+		if (display_bindless_texture)
+		{
+			vis_bindless_pipeline->commandRecord(drawCmdBuffers[i]);
+		}
+
 		drawUI(drawCmdBuffers[i]);
 
 		vkCmdEndRenderPass(drawCmdBuffers[i]);
 
-		if (culling_pipeline->enable_hiz)
+		if (culling_pipeline->enable_hiz && !display_bindless_texture)
 		{
 			hiz_pipeline->copyDepth(drawCmdBuffers[i], depthStencil.image);
 		}
@@ -130,7 +135,7 @@ void Application::prepare()
 	}
 
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza_1/Sponza01.gltf", queue);
-	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/17/test.gltf", queue);
+	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/23/test.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/audi/auti03.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/bonza/Bonza4X.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
@@ -151,6 +156,9 @@ void Application::prepare()
 	debug_pipeline->prepare(renderPass);
 
 	culling_pipeline->prepare(queue, *scene_pipeline, *hiz_pipeline);
+
+	vis_bindless_pipeline = std::make_unique<VisBindlessPipeline>(*vulkanDevice, *scene);
+	vis_bindless_pipeline->prepare(renderPass, queue);
 
 	buildCommandBuffers();
 	prepared = true;
@@ -383,6 +391,12 @@ void Application::updateOverlay()
 		{
 			scene_pipeline->enable_tessellation = !scene_pipeline->enable_tessellation;
 			scene_pipeline->setupPipeline(renderPass);
+			UIOverlay.updated = true;
+		}
+
+		if (ImGui::Button(display_bindless_texture ? "bindless texture visualization disable" : "bindless texture visualization enable"))
+		{
+			display_bindless_texture = !display_bindless_texture;
 			UIOverlay.updated = true;
 		}
 
