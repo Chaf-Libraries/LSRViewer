@@ -55,7 +55,7 @@ void CullingPipeline::buildCommandBuffer()
 		vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
 		vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout, 0, 1, &descriptor_set, 0, 0);
 
-		vkCmdDispatch(command_buffer, getGroupCount(primitive_count, 32), 1, 1);
+		vkCmdDispatch(command_buffer, getGroupCount(primitive_count, 64), 1, 1);
 	}
 
 	vkEndCommandBuffer(command_buffer);

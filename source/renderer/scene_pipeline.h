@@ -72,6 +72,8 @@ public:
 
 	bool enable_tessellation{ false };
 
+	bool enable_multi_thread{ false };
+
 	bool line_mode{ false };
 
 	struct

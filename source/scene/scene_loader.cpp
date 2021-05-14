@@ -176,6 +176,7 @@ namespace chaf
 		{
 			mesh.addPrimitive(primitives[gltf_node.mesh][i]);
 			scene.index_count += primitives[gltf_node.mesh][i].index_count;
+			scene.primitive_count++;
 		}
 	}
 

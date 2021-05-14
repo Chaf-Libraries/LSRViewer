@@ -9,6 +9,7 @@
 #define ENABLE_VALIDATION false
 #endif
 
+//#define ENABLE_FULLSCREEN
 
 Application::Application() : VulkanExampleBase(ENABLE_VALIDATION)
 {
@@ -18,14 +19,22 @@ Application::Application() : VulkanExampleBase(ENABLE_VALIDATION)
 	camera.setPosition(glm::vec3(0.0f, 1.0f, 0.0f));
 	camera.setRotation(glm::vec3(0.0f, -90.0f, 0.0f));
 	camera.setPerspective(60.0f, (float)width / (float)height, 0.1f, 1000.f);
-	camera.setMovementSpeed(10.f);
+	camera.setMovementSpeed(50.f);
 	camera.setRotationSpeed(0.1f);
 	settings.overlay = true;
+	width = 2560;
+	height = 1440;
+#ifdef ENABLE_FULLSCREEN
+	settings.fullscreen = true;
+	width = 3840;
+	height = 2160;
+#endif // ENABLE_FULLSCREEN
+
 
 	ImGui::StyleColorsDark();
 
 	const std::string font_path = "../data/fonts/arialbd.ttf";
-	ImGui::GetIO().Fonts->AddFontFromFileTTF(font_path.c_str(), 20.0f);
+	ImGui::GetIO().Fonts->AddFontFromFileTTF(font_path.c_str(), 30.0f);
 
 	// conditional rendering extension
 	enabledDeviceExtensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
@@ -135,7 +144,7 @@ void Application::prepare()
 	}
 
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza_1/Sponza01.gltf", queue);
-	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/23/test.gltf", queue);
+	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/2/test.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/audi/auti03.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/bonza/Bonza4X.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
@@ -360,6 +369,7 @@ void Application::updateOverlay()
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (1000.0f / lastFPS), lastFPS);
 	ImGui::Text("total primitives: %d", culling_pipeline->primitive_count);
 	ImGui::Text("visible primitives: %d", cull_count);
+	ImGui::Text("current resolution: %d x %d", width, height);
 	ImGui::Text("triangles number: %d", scene->index_count / 3);
 
 	if (ImGui::Button("screen shot"))
@@ -424,12 +434,12 @@ void Application::updateOverlay()
 				hiz_mip_level.push_back(hiz_mip_level_str[i].c_str());
 			}
 
-			if (ImGui::Combo("Hiz-visualize", &display_debug, &hiz_mip_level[0], hiz_mip_level.size(), hiz_mip_level.size()))
+			if (ImGui::Combo("Hiz-visualize", &display_debug, &hiz_mip_level[0], static_cast<int>(hiz_mip_level.size()), static_cast<int>(hiz_mip_level.size())))
 			{
 				if (display_debug > 0)
 				{
 					debug_pipeline->updateDescriptors(*hiz_pipeline, display_debug - 1);
-					buildCommandBuffers();
+					UIOverlay.updated = true;
 				}
 			}
 		}

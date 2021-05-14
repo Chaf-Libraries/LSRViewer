@@ -94,6 +94,7 @@ namespace chaf
 
 		size_t index_count{ 0 };
 		size_t vertex_count{ 0 };
+		size_t primitive_count{ 0 };
 	};
 	
 

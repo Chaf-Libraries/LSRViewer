@@ -38,8 +38,8 @@ void ScenePipeline::prepare(VkRenderPass render_pass, VkQueue queue)
 
 	vks::Buffer stagingBuffer;
 
-	std::vector<uint32_t> instanceData(maxCount);
-	for (uint32_t i = 0; i < maxCount; i++)
+	std::vector<uint32_t> instanceData(scene.primitive_count);
+	for (uint32_t i = 0; i < scene.primitive_count; i++)
 	{
 		instanceData[i] = i;
 	}
@@ -188,7 +188,7 @@ void ScenePipeline::setupPipeline(VkRenderPass render_pass)
 		vks::initializers::vertexInputAttributeDescription(0, 3, VK_FORMAT_R32G32B32_SFLOAT, offsetof(chaf::Vertex, color)),
 		vks::initializers::vertexInputAttributeDescription(0, 4, VK_FORMAT_R32G32B32_SFLOAT, offsetof(chaf::Vertex, tangent)),
 		// Instance Index
-		vks::initializers::vertexInputAttributeDescription(1, 5, VK_FORMAT_R32_UINT, sizeof(uint32_t)),
+		vks::initializers::vertexInputAttributeDescription(1, 5, VK_FORMAT_R32_SINT, 0),
 	};
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCI = vks::initializers::pipelineVertexInputStateCreateInfo(vertexInputBindings, vertexInputAttributes);
 
@@ -245,6 +245,14 @@ void ScenePipeline::commandRecord(VkCommandBuffer& cmd_buffer, CullingPipeline& 
 	{
 		if (device.features.multiDrawIndirect)
 		{
+			// TODO: multi-threading
+			/*uint32_t thread_count = std::thread::hardware_concurrency();
+			uint32_t group_size = static_cast<uint32_t>(culling_pipeline.indirect_commands.size()) / thread_count;
+			for (uint32_t i = 0; i < thread_count - 1; i++)
+			{
+				vkCmdDrawIndexedIndirect(cmd_buffer, culling_pipeline.indirect_command_buffer.buffer, static_cast<uint64_t>(i) * static_cast<uint64_t>(group_size) * sizeof(VkDrawIndexedIndirectCommand), group_size, sizeof(VkDrawIndexedIndirectCommand));
+			}
+			vkCmdDrawIndexedIndirect(cmd_buffer, culling_pipeline.indirect_command_buffer.buffer, static_cast<uint64_t>(thread_count - 1) * static_cast<uint64_t>(group_size) * sizeof(VkDrawIndexedIndirectCommand), culling_pipeline.indirect_commands.size()-(thread_count - 1)*group_size, sizeof(VkDrawIndexedIndirectCommand));*/
 			vkCmdDrawIndexedIndirect(cmd_buffer, culling_pipeline.indirect_command_buffer.buffer, 0, static_cast<uint32_t>(culling_pipeline.indirect_commands.size()), sizeof(VkDrawIndexedIndirectCommand));
 		}
 		else
