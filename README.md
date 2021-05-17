@@ -56,5 +56,5 @@ Large Scene Rendering Viewer [![Codacy Badge](https://app.codacy.com/project/bad
 
 ## Demo
 
-<iframe width="1920" height="1080" src="https://www.youtube.com/embed/YqyJ-job9d4" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/YqyJ-job9d4/0.jpg)](http://www.youtube.com/watch?v=YqyJ-job9d4 "LSRViewer")
 
