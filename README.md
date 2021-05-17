@@ -30,21 +30,29 @@ Large  Scene Rendering Viewer
 
 1. Windows 10 OS
 2. Install Visual Studio Community 2019, CMake 3.20.0 and Vulkan
-3. run `build.bat` 
+3. Run `build.bat` 
 
 ## Feature
 
-* Basic Render Pipeline
-* Scene Graph (still improving)
-* CPU & GPU culling
+### Basic Render Pipeline
 
-## TODO
+![](./images/render_pipeline.png)
 
-- [x] Indirect Draw
-- [x] Bindless Texture (Descriptor indexing)
-- [x] GPU Hi-z Occlusion Culling
-- [x] Tessellation
-- [ ] Shader Compiler
-- [ ] New Scene Parser
-- [ ] Scene Spilter
+### GPU Frustum Culling
+
+![](./images/frustum_culling.png)
+
+### GPU Occlusion Culling
+
+![](images/occlusion_culling.png)
+
+### Bindless Texture
+
+![](images/bindless_texture.png)
+
+### Tessellation
+
+![](images/tessellation.png)
+
+
 

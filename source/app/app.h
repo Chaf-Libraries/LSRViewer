@@ -60,6 +60,7 @@ private:
 
 	int32_t display_debug{ 0 };
 	bool display_bindless_texture{ false };
+	bool fix_frustum{ false };
 
 	uint32_t cull_count{ 0 };
 };

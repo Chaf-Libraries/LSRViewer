@@ -144,10 +144,10 @@ void Application::prepare()
 	}
 
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza_1/Sponza01.gltf", queue);
-	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/2/test.gltf", queue);
+	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/test/27/test.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/audi/auti03.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/bonza/Bonza4X.gltf", queue);
-	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
+	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/sponza/sponza.gltf", queue);
 	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/models/E/E/untitled2.gltf", queue);
 
 	scene->buffer_cacher = std::make_unique<chaf::BufferCacher>(*vulkanDevice, queue);
@@ -312,7 +312,10 @@ void Application::update()
 	scene_pipeline->sceneUBO.values.range = { static_cast<float>(width), static_cast<float>(height), camera.getNearClip(), camera.getFarClip() };
 	chaf::Frustum frustum;
 	frustum.update(camera.matrices.perspective * camera.matrices.view);
-	memcpy(scene_pipeline->sceneUBO.values.frustum, frustum.planes.data(), sizeof(glm::vec4) * 6);
+	if (!fix_frustum)
+	{
+		memcpy(scene_pipeline->sceneUBO.values.frustum, frustum.planes.data(), sizeof(glm::vec4) * 6);
+	}
 	memcpy(scene_pipeline->sceneUBO.buffer.mapped, &scene_pipeline->sceneUBO.values, sizeof(scene_pipeline->sceneUBO.values));
 }
 
@@ -417,6 +420,12 @@ void Application::updateOverlay()
 			culling_pipeline->destroy();
 			culling_pipeline->setupPipeline(queue, *scene_pipeline, *hiz_pipeline);
 			UIOverlay.updated = true;
+		}
+
+		if (ImGui::Button(fix_frustum ? "fixed frustum disable" : "fixed frustum enable"))
+		{
+			fix_frustum = !fix_frustum;
+			update();
 		}
 
 		if (culling_pipeline->enable_hiz)
