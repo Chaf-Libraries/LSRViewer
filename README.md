@@ -1,5 +1,5 @@
 # LSRViewer
-Large  Scene Rendering Viewer
+Large Scene Rendering Viewer [![Codacy Badge](https://app.codacy.com/project/badge/Grade/fb5533aba9604beab54009876bef8b99)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Chaf-Libraries/LSRViewer&amp;utm_campaign=Badge_Grade)
 
 ## Platform
 
