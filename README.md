@@ -1,19 +1,11 @@
 # LSRViewer
 Large Scene Rendering Viewer [![Codacy Badge](https://app.codacy.com/project/badge/Grade/fb5533aba9604beab54009876bef8b99)](https://www.codacy.com?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Chaf-Libraries/LSRViewer&amp;utm_campaign=Badge_Grade)
 
-## Platform
-
-* Windows 10 Professional
-* CPU: Intel(R) Core(TM) i9-10900 CPU @ 2.80GHz
-
-* GPU: NVIDIA GeForce RTX 3060
-
 ## Dev Environment
 
-* Visual Studio Community 2019
-* CMake 3.20.0
-* Python 3.9.2
-* Vulkan 1.0
+* [Visual Studio 2019](https://visualstudio.microsoft.com/)
+* [CMake 3.20.0](https://cmake.org/)
+* [Vulkan 1.0](https://www.vulkan.org/)
 
 ## Third Party Dependency
 
@@ -26,11 +18,17 @@ Large Scene Rendering Viewer [![Codacy Badge](https://app.codacy.com/project/bad
 * [stb](https://github.com/nothings/stb)
 * [tinygltf](https://github.com/syoyo/tinygltf/)
 
-## Build
+## Install & Build
 
-1. Windows 10 OS
-2. Install Visual Studio Community 2019, CMake 3.20.0 and Vulkan
-3. Run `build.bat` 
+1. `git clone https://github.com/Chaf-Libraries/LSRViewer --recursive`
+2. Run `build.bat` 
+
+## Testing Platform
+
+* Windows 10 Professional
+* CPU: Intel(R) Core(TM) i9-10900 CPU @ 2.80GHz
+
+* GPU: NVIDIA GeForce RTX 3060
 
 ## Feature
 
