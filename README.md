@@ -23,6 +23,8 @@ Large Scene Rendering Viewer [![Codacy Badge](https://app.codacy.com/project/bad
 1. `git clone https://github.com/Chaf-Libraries/LSRViewer --recursive`
 2. Run `build.bat` 
 
+If extension `DynamicState` is not supported, disable CMake option `ENABLE_DYNAMIC_STATE`.
+
 ## Testing Platform
 
 * Windows 10 Professional

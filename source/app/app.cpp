@@ -43,12 +43,12 @@ Application::Application() : VulkanExampleBase(ENABLE_VALIDATION)
 	enabledDeviceExtensions.push_back(VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME);
 
 	// dynamic state extension for turn off depth test manually
+#ifdef ENABLE_DYNAMIC_STATE
 	enabledDeviceExtensions.push_back(VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME);
-	//physicalDeviceDepthClipEnableFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DEPTH_CLIP_ENABLE_FEATURES_EXT;
-	//physicalDeviceDepthClipEnableFeatures.depthClipEnable = VK_TRUE;
 
 	physicalDeviceExtendedDynamicStateFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT;
 	physicalDeviceExtendedDynamicStateFeatures.extendedDynamicState = VK_TRUE;
+#endif // ENABLE_DYNAMIC_STATE
 
 	// descriptor indexing extension
 	enabledDeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
@@ -59,8 +59,11 @@ Application::Application() : VulkanExampleBase(ENABLE_VALIDATION)
 	physicalDeviceDescriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
 	physicalDeviceDescriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
 
-	deviceCreatepNextChain = &physicalDeviceExtendedDynamicStateFeatures;
-	physicalDeviceExtendedDynamicStateFeatures.pNext = &physicalDeviceDescriptorIndexingFeatures;
+	deviceCreatepNextChain = &physicalDeviceDescriptorIndexingFeatures;
+
+#ifdef ENABLE_DYNAMIC_STATE
+	physicalDeviceDescriptorIndexingFeatures.pNext = &physicalDeviceExtendedDynamicStateFeatures;
+#endif // ENABLE_DYNAMIC_STATE
 
 	enabledInstanceExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
@@ -108,12 +111,14 @@ void Application::buildCommandBuffers()
 
 		scene_pipeline->commandRecord(drawCmdBuffers[i], *culling_pipeline);
 
+#ifdef ENABLE_DYNAMIC_STATE
 		if (display_debug > 0)
 		{
 			vkCmdSetDepthTestEnableEXT(drawCmdBuffers[i], VK_FALSE);
 			debug_pipeline->buildCommandBuffer(drawCmdBuffers[i], renderPassBeginInfo);
 			vkCmdSetDepthTestEnableEXT(drawCmdBuffers[i], VK_TRUE);
 		}
+#endif // ENABLE_DYNAMIC_STATE
 
 		if (display_bindless_texture)
 		{
@@ -137,14 +142,15 @@ void Application::prepare()
 {
 	VulkanExampleBase::prepare();
 
+#ifdef ENABLE_DYNAMIC_STATE
 	vkCmdSetDepthTestEnableEXT = reinterpret_cast<PFN_vkCmdSetDepthTestEnableEXT>(vkGetDeviceProcAddr(device, "vkCmdSetDepthTestEnableEXT"));
 	if (!vkCmdSetDepthTestEnableEXT)
 	{
 		vks::tools::exitFatal("Could not get a valid function pointer for vkCmdSetDepthTestEnableEXT", -1);
 	}
+#endif // ENABLE_DYNAMIC_STATE
 
-	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, "D:/Workspace/LSRViewer/data/scene/test.gltf", queue);
-
+	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, std::string(PROJECT_SOURCE_DIR)+"data/scene/test.gltf", queue);
 	scene->buffer_cacher = std::make_unique<chaf::BufferCacher>(*vulkanDevice, queue);
 	scene->buffer_cacher->addBuffer(0, chaf::SceneLoader::vertex_buffer, chaf::SceneLoader::index_buffer);
 
@@ -229,8 +235,6 @@ void Application::draw()
 
 		VK_CHECK_RESULT(vkQueueSubmit(hiz_pipeline->compute_queue, 1, &hizSubmitInfo, VK_NULL_HANDLE));
 	}
-
-
 
 	VkSubmitInfo cullSubmitInfo = vks::initializers::submitInfo();
 	cullSubmitInfo.commandBufferCount = 1;
@@ -423,6 +427,7 @@ void Application::updateOverlay()
 			update();
 		}
 
+#ifdef ENABLE_DYNAMIC_STATE
 		if (culling_pipeline->enable_hiz)
 		{
 			std::vector<const char*> hiz_mip_level;
@@ -447,6 +452,7 @@ void Application::updateOverlay()
 				}
 			}
 		}
+#endif // ENABLE_DYNAMIC_STATE
 	}
 
 	// Camera Controller
@@ -574,7 +580,6 @@ void Application::updateOverlay()
 				ImGui::TreePop();
 			}
 		}
-
 	}
 
 	ImGui::PushItemWidth(110.0f * UIOverlay.scale);

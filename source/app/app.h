@@ -19,11 +19,12 @@
 class Application :public VulkanExampleBase
 {
 public:
-	PFN_vkCmdSetDepthTestEnableEXT vkCmdSetDepthTestEnableEXT;
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT physicalDeviceDescriptorIndexingFeatures{};
-	VkPhysicalDeviceDepthClipEnableFeaturesEXT physicalDeviceDepthClipEnableFeatures{};
+#ifdef ENABLE_DYNAMIC_STATE
+	PFN_vkCmdSetDepthTestEnableEXT vkCmdSetDepthTestEnableEXT;
 	VkPhysicalDeviceExtendedDynamicStateFeaturesEXT physicalDeviceExtendedDynamicStateFeatures;
-	
+#endif // ENABLE_DYNAMIC_STATE
+
 public:
 	Application();
 
