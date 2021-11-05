@@ -10,6 +10,8 @@ layout (location = 4) in vec4 inTangent;
 
 layout (location = 5) in uint inIndex;
 
+
+
 layout (set = 0, binding = 0) uniform UBOScene 
 {
 	mat4 projection;

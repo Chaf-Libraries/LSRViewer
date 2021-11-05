@@ -11,8 +11,6 @@
 
 #include <scene/cacher/lru.h>
 
-#define ENABLE_VALIDATION true
-
 #include <app/app.h>
 
 Application* app;

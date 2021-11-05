@@ -61,13 +61,15 @@ void ScenePipeline::prepare(VkRenderPass render_pass, VkQueue queue)
 
 	stagingBuffer.destroy();
 
+
+
 	// Prepare descriptor pool
 	std::vector<VkDescriptorPoolSize> poolSizes = {
-		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1),
-		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1),
-		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, maxCount)
+		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 	1),
+		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 	1),
+		vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
 	};
-	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes, maxCount + 2);
+	VkDescriptorPoolCreateInfo descriptorPoolInfo = vks::initializers::descriptorPoolCreateInfo(poolSizes,  2);
 	VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr, &descriptor_pool));
 
 	// Prepare descriptor set layout
@@ -79,11 +81,11 @@ void ScenePipeline::prepare(VkRenderPass render_pass, VkQueue queue)
 	};
 	VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCI = vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings.data(), static_cast<uint32_t>(setLayoutBindings.size()));
 	VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device.logicalDevice, &descriptorSetLayoutCI, nullptr, &descriptor_set_layouts.scene));
-
+	
 	setLayoutBindings = {
 		// binding all textures
-		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_ALL_GRAPHICS, 0, maxCount)
-	};
+		vks::initializers::descriptorSetLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_ALL_GRAPHICS, 0, 1024)
+	}; 
 
 	descriptorSetLayoutCI.pBindings = setLayoutBindings.data();
 	descriptorSetLayoutCI.bindingCount = static_cast<uint32_t>(setLayoutBindings.size());
@@ -92,8 +94,9 @@ void ScenePipeline::prepare(VkRenderPass render_pass, VkQueue queue)
 	setLayoutBindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
 	setLayoutBindingFlags.bindingCount = 1;
 	std::vector<VkDescriptorBindingFlagsEXT> descriptorBindingFlags = {
-		0,
-		VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT
+		//VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+		VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT,
+		//VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT
 	};
 	setLayoutBindingFlags.pBindingFlags = descriptorBindingFlags.data();
 	descriptorSetLayoutCI.pNext = &setLayoutBindingFlags;
@@ -130,17 +133,17 @@ void ScenePipeline::prepare(VkRenderPass render_pass, VkQueue queue)
 
 	vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, nullptr);
 
-	// Descriptor set for bindless object
-	VkDescriptorSetVariableDescriptorCountAllocateInfoEXT variableDescriptorCountAllocInfo = {};
+	//// Descriptor set for bindless object
+	//VkDescriptorSetVariableDescriptorCountAllocateInfoEXT variableDescriptorCountAllocInfo = {};
 
-	uint32_t variableDescCounts[] = { maxCount };
+	//uint32_t variableDescCounts[] = { 1024 };
 
-	variableDescriptorCountAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT;
-	variableDescriptorCountAllocInfo.descriptorSetCount = 1;
-	variableDescriptorCountAllocInfo.pDescriptorCounts = variableDescCounts;
+	//variableDescriptorCountAllocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT;
+	//variableDescriptorCountAllocInfo.descriptorSetCount = 1;
+	//variableDescriptorCountAllocInfo.pDescriptorCounts = variableDescCounts;
 
 	allocInfo = vks::initializers::descriptorSetAllocateInfo(descriptor_pool, &descriptor_set_layouts.object, 1);
-	allocInfo.pNext = &variableDescriptorCountAllocInfo;
+	//allocInfo.pNext = &variableDescriptorCountAllocInfo;
 
 	VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptor_set.object));
 
@@ -184,11 +187,11 @@ void ScenePipeline::setupPipeline(VkRenderPass render_pass)
 	const std::vector<VkVertexInputAttributeDescription> vertexInputAttributes = {
 		vks::initializers::vertexInputAttributeDescription(0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(chaf::Vertex, pos)),
 		vks::initializers::vertexInputAttributeDescription(0, 1, VK_FORMAT_R32G32B32_SFLOAT, offsetof(chaf::Vertex, normal)),
-		vks::initializers::vertexInputAttributeDescription(0, 2, VK_FORMAT_R32G32B32_SFLOAT, offsetof(chaf::Vertex, uv)),
+		vks::initializers::vertexInputAttributeDescription(0, 2, VK_FORMAT_R32G32_SFLOAT, offsetof(chaf::Vertex, uv)),
 		vks::initializers::vertexInputAttributeDescription(0, 3, VK_FORMAT_R32G32B32_SFLOAT, offsetof(chaf::Vertex, color)),
-		vks::initializers::vertexInputAttributeDescription(0, 4, VK_FORMAT_R32G32B32_SFLOAT, offsetof(chaf::Vertex, tangent)),
+		vks::initializers::vertexInputAttributeDescription(0, 4, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(chaf::Vertex, tangent)),
 		// Instance Index
-		vks::initializers::vertexInputAttributeDescription(1, 5, VK_FORMAT_R32_SINT, 0),
+		vks::initializers::vertexInputAttributeDescription(1, 5, VK_FORMAT_R32_UINT, 0),
 	};
 	VkPipelineVertexInputStateCreateInfo vertexInputStateCI = vks::initializers::pipelineVertexInputStateCreateInfo(vertexInputBindings, vertexInputAttributes);
 
@@ -268,7 +271,7 @@ void ScenePipeline::commandRecord(VkCommandBuffer& cmd_buffer, CullingPipeline& 
 
 void ScenePipeline::updateDescriptors()
 {
-	std::vector<VkDescriptorImageInfo> textureDescriptors(maxCount);
+	std::vector<VkDescriptorImageInfo> textureDescriptors(maxCount);	std::cout << maxCount << std::endl;
 	for (size_t i = 0; i < maxCount; i++)
 	{
 		textureDescriptors[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -282,7 +285,7 @@ void ScenePipeline::updateDescriptors()
 	writeDescriptorSet.dstBinding = 0;
 	writeDescriptorSet.dstArrayElement = 0;
 	writeDescriptorSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	writeDescriptorSet.descriptorCount = maxCount;
+	writeDescriptorSet.descriptorCount = static_cast<uint32_t>(textureDescriptors.size());
 	writeDescriptorSet.dstSet = descriptor_set.object;
 	writeDescriptorSet.pImageInfo = textureDescriptors.data();
 

@@ -106,7 +106,8 @@ void HizPipeline::prepareHiz()
 	sampler.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	sampler.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 	sampler.minLod = 0; 
-	sampler.maxLod = static_cast<float>(hiz_image.depth_pyramid_levels);
+	//sampler.maxLod = static_cast<float>(hiz_image.depth_pyramid_levels);
+	sampler.maxLod = FLT_MAX;
 
 #ifdef ENABLE_DYNAMIC_STATE
 	VkSamplerReductionModeCreateInfoEXT createInfoReduction = {};

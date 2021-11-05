@@ -8,7 +8,7 @@ layout (location = 2) in vec2 inUV;
 layout (location = 3) in vec3 inColor;
 layout (location = 4) in vec4 inTangent;
 
-layout (location = 5) in int inIndex;
+layout (location = 5) in uint inIndex;
 
 layout (set = 0, binding = 0) uniform UBOScene 
 {
@@ -51,7 +51,7 @@ layout (location = 2) out vec2 outUV;
 layout (location = 3) out vec3 outViewVec;
 layout (location = 4) out vec3 outLightVec;
 layout (location = 5) out vec4 outTangent;
-layout (location = 6) flat out int outIndex;
+layout (location = 6) flat out uint outIndex;
 
 
 void main() 

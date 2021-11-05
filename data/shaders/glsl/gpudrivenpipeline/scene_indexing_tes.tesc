@@ -27,6 +27,30 @@ layout (location = 12) out vec4 outTangent[3];
 layout (location = 13) out mat3 outTBN[3];
 layout (location = 16) out uint outIndex[3];
 
+struct ObjectData 
+{
+	int baseColorTextureIndex;
+	int normalTextureIndex;
+	int emissiveTextureIndex;
+	int occlusionTextureIndex;
+	int metallicRoughnessTextureIndex;
+	float metallicFactor;
+	float roughnessFactor;
+	int alphaMode;
+	float alphaCutOff;
+	uint doubleSided;
+
+	// Parameter
+	vec4 baseColorFactor;
+	vec3 emissiveFactor;
+
+	mat4 model;
+};
+
+layout (set = 0, binding = 1) buffer ObjectBuffer 
+{
+   ObjectData objectData[ ];
+};
 
 // Uniform buffer
 layout (set = 0, binding = 0) uniform UBOScene 
@@ -57,7 +81,7 @@ float ComputeTessLevel(vec3 p0, vec3 p1)
     float diameter = sqrt(d.x*d.x+d.y*d.y);
 	
 	//这里的20控制细分层次,可以根据屏幕大小等调整
-   float tessLevel = max(1.0,   ceil(uboScene.range.x*diameter/10));
+   float tessLevel = max(1.0,   ceil(uboScene.range.x*diameter/50));
    
    return min(tessLevel, 20);
 }
@@ -73,9 +97,9 @@ void main()
     vec3 nb = inTBN[1][2];
     vec3 nc = inTBN[2][2];
 
-    float tessa = ComputeTessLevel(pa, pb);
-    float tessb = ComputeTessLevel(pb, pc);
-    float tessc = ComputeTessLevel(pc, pa);
+    float tessa = ComputeTessLevel((objectData[inIndex[0]].model* vec4(pa, 1.0)).xyz, (objectData[inIndex[1]].model* vec4(pb, 1.0)).xyz);
+    float tessb = ComputeTessLevel((objectData[inIndex[1]].model* vec4(pb, 1.0)).xyz, (objectData[inIndex[2]].model* vec4(pc, 1.0)).xyz);
+    float tessc = ComputeTessLevel((objectData[inIndex[2]].model* vec4(pc, 1.0)).xyz, (objectData[inIndex[0]].model* vec4(pa, 1.0)).xyz);
 
 
     gl_TessLevelOuter[0] = tessb;

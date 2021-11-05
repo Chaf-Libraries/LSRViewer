@@ -6,13 +6,18 @@
 #ifdef _DEBUG
 #define ENABLE_VALIDATION true
 #else
-#define ENABLE_VALIDATION false
+#define ENABLE_VALIDATION true
 #endif
 
 //#define ENABLE_FULLSCREEN
 
 Application::Application() : VulkanExampleBase(ENABLE_VALIDATION)
 {
+	glm::vec3 eye = { 0,0,-2.25999832 };
+	glm::vec3 front = { 0.999949992 ,0.00999983307 , 0 };
+	glm::vec3 up = { -0.00999983307 , 0.999949992 ,0.00000000 };
+	auto mat = glm::lookAt(eye, front+eye, up);
+	std::cout << "Test";
 	title = "LSRViewer";
 	camera.type = Camera::CameraType::firstperson;
 	camera.flipY = true;
@@ -58,6 +63,8 @@ Application::Application() : VulkanExampleBase(ENABLE_VALIDATION)
 	physicalDeviceDescriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 	physicalDeviceDescriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
 	physicalDeviceDescriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
+	physicalDeviceDescriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+	physicalDeviceDescriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
 
 	deviceCreatepNextChain = &physicalDeviceDescriptorIndexingFeatures;
 
@@ -85,8 +92,7 @@ void Application::buildCommandBuffers()
 
 	VkClearValue clearValues[2];
 	clearValues[0].color = defaultClearColor;
-	clearValues[0].color = { { 0.25f, 0.25f, 0.25f, 1.0f } };;
-	clearValues[1].depthStencil = { 1.0f, 0 };
+	clearValues[0].color = { { 0.25f, 0.25f, 0.25f, 1.0f } };;	clearValues[1].depthStencil = { 1.0f, 0 };
 
 	VkRenderPassBeginInfo renderPassBeginInfo = vks::initializers::renderPassBeginInfo();
 	renderPassBeginInfo.renderPass = renderPass;
@@ -150,7 +156,8 @@ void Application::prepare()
 	}
 #endif // ENABLE_DYNAMIC_STATE
 
-	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, std::string(PROJECT_SOURCE_DIR)+"data/scene/test.gltf", queue);
+	//scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, std::string(PROJECT_SOURCE_DIR) + "data/models/sponza/sponza.gltf", queue);
+	scene = chaf::SceneLoader::LoadFromFile(*vulkanDevice, std::string(PROJECT_SOURCE_DIR) + "data/test/test.gltf", queue);
 	scene->buffer_cacher = std::make_unique<chaf::BufferCacher>(*vulkanDevice, queue);
 	scene->buffer_cacher->addBuffer(0, chaf::SceneLoader::vertex_buffer, chaf::SceneLoader::index_buffer);
 
@@ -186,6 +193,11 @@ void Application::getEnabledFeatures()
 		enabledFeatures.fillModeNonSolid = VK_TRUE;
 	}
 
+	if (deviceFeatures.shaderSampledImageArrayDynamicIndexing)
+	{
+		enabledFeatures.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+	}
+
 	if (deviceFeatures.sparseBinding && deviceFeatures.sparseResidencyImage2D)
 	{
 		enabledFeatures.shaderResourceResidency = VK_TRUE;
@@ -210,16 +222,17 @@ void Application::getEnabledFeatures()
 
 void Application::draw()
 {
+
 	VulkanExampleBase::prepareFrame();
 
 	if (culling_pipeline->enable_hiz)
 	{
-		vkWaitForFences(device, 1, &hiz_pipeline->fence, VK_TRUE, UINT64_MAX);
+		//vkWaitForFences(device, 1, &hiz_pipeline->fence, VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &hiz_pipeline->fence);
 	}
 	else
 	{
-		vkWaitForFences(device, 1, &culling_pipeline->fence, VK_TRUE, UINT64_MAX);
+		//vkWaitForFences(device, 1, &culling_pipeline->fence, VK_TRUE, UINT64_MAX);
 		vkResetFences(device, 1, &culling_pipeline->fence);
 	}
 
@@ -232,6 +245,12 @@ void Application::draw()
 		hizSubmitInfo.pSignalSemaphores = &hiz_pipeline->semaphore;
 		hizSubmitInfo.waitSemaphoreCount = 0;
 		hizSubmitInfo.pWaitSemaphores = nullptr;
+
+		std::array<VkPipelineStageFlags, 1> hizStageFlags = {
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		};
+
+		hizSubmitInfo.pWaitDstStageMask = hizStageFlags.data();
 
 		VK_CHECK_RESULT(vkQueueSubmit(hiz_pipeline->compute_queue, 1, &hizSubmitInfo, VK_NULL_HANDLE));
 	}
@@ -258,9 +277,9 @@ void Application::draw()
 	submitInfo.pCommandBuffers = &drawCmdBuffers[currentBuffer];
 
 	// Wait on present and compute semaphores
-	std::array<VkPipelineStageFlags, 2> stageFlags = {
+	std::array<VkPipelineStageFlags, 1> stageFlags = {
 		VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-		VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		//VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 	};
 	std::array<VkSemaphore, 2> waitSemaphores = {
 		semaphores.presentComplete,						// Wait for presentation to finished
@@ -294,7 +313,7 @@ void Application::draw()
 void Application::render()
 {
 	draw();
-
+	buildCommandBuffers();
 	if (camera.updated)
 	{
 		update();
@@ -316,6 +335,8 @@ void Application::update()
 		memcpy(scene_pipeline->sceneUBO.values.frustum, frustum.planes.data(), sizeof(glm::vec4) * 6);
 	}
 	memcpy(scene_pipeline->sceneUBO.buffer.mapped, &scene_pipeline->sceneUBO.values, sizeof(scene_pipeline->sceneUBO.values));
+
+
 }
 
 void Application::OnUpdateUIOverlay(vks::UIOverlay* overlay)

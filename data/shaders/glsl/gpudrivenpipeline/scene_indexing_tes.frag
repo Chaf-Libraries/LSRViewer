@@ -67,9 +67,5 @@ vec4 color = texture(textureArray[nonuniformEXT(objectData[inIndex].baseColorTex
 	vec3 R = reflect(-L, N);
 	vec3 diffuse = max(dot(N, L), ambient).rrr;
 	float specular = pow(max(dot(R, V), 0.0), 32.0);
-	outFragColor = vec4(diffuse * color.rgb, color.a);
-	// float depth=texture(depthMap, inUV).x;
-	// outFragColor = vec4(vec3(depth), 1.0);
-
-
+	outFragColor = vec4(diffuse * color.rgb, color.a)*1.1;
 }

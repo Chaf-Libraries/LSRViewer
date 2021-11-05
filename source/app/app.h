@@ -16,10 +16,13 @@
 
 #include <vk_mem_alloc.h>
 
+//#define ENABLE_DYNAMIC_STATE
+
 class Application :public VulkanExampleBase
 {
 public:
 	VkPhysicalDeviceDescriptorIndexingFeaturesEXT physicalDeviceDescriptorIndexingFeatures{};
+	VkPhysicalDeviceDescriptorIndexingPropertiesEXT physicalDeviceDescriptorIndexingProperties{};
 #ifdef ENABLE_DYNAMIC_STATE
 	PFN_vkCmdSetDepthTestEnableEXT vkCmdSetDepthTestEnableEXT;
 	VkPhysicalDeviceExtendedDynamicStateFeaturesEXT physicalDeviceExtendedDynamicStateFeatures;
