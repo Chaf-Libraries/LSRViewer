@@ -6,25 +6,23 @@ on:
   pull_request:
     branches: [ bindless ]
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
-  BUILD_TYPE: Release
-
 jobs:
   build:
-    # The CMake configure and build commands are platform agnostic and should work equally
-    # well on Windows or Mac.  You can convert this to a matrix build if you need
-    # cross-platform coverage.
-    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
-    runs-on: windows-latest
-
+    name: "Build ${{ matrix.platform }} in ${{ matrix.build_type }}"
+    strategy:
+      matrix:
+        platform: [windows]
+        build_type: [Release]
+    env:
+      PARALLEL: -j 2
+    runs-on: "${{ matrix.platform }}-latest"
     steps:
-    - uses: actions/checkout@v2
-      with:
-            submodules: "recursive"
+      - uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
 
-    - name: Configure
-      run: cmake -H"." -B"build/${{ matrix.platform }}"
+      - name: Configure
+        run: cmake -H"." -B"build/${{ matrix.platform }}"
 
-    - name: "Build ${{ matrix.platform }} in ${{ matrix.build_type }}"
-      run: cmake --build "build/${{ matrix.platform }}" --target ALL_BUILD --config ${{ matrix.build_type }} ${{ env.PARALLEL }}
+      - name: "Build ${{ matrix.platform }} in ${{ matrix.build_type }}"
+        run: cmake --build "build/${{ matrix.platform }}" --target ALL_BUILD --config ${{ matrix.build_type }} ${{ env.PARALLEL }}
